@@ -1,0 +1,14 @@
+<ivy-module version="2.0">
+  <info organisation="bundledPlugin" module="com.jetbrains.sh" revision="243.23654.117+714"/>
+  <configurations>
+    <conf name="default" visibility="public"/>
+  </configurations>
+  <publications>
+    <artifact name="/Users/klaus/.gradle/caches/8.13/transforms/80f754fc2de00ad25ea02a264d582afb/transformed/ideaIC-2024.3.2-aarch64/plugins/sh" type="directory" conf="default"/>
+  </publications>
+  <dependencies>
+    <dependency org="bundledPlugin" name="org.jetbrains.plugins.terminal" rev="243.23654.117+737"/>
+    <dependency org="bundledPlugin" name="com.intellij.copyright" rev="243.23654.117+458"/>
+    <dependency org="bundledPlugin" name="org.intellij.plugins.markdown" rev="243.23654.117+500"/>
+  </dependencies>
+</ivy-module>

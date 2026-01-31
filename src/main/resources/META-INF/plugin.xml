@@ -1,0 +1,64 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
+    <id>cn.mklaus.sqlagent</id>
+
+    <!-- Public plugin name should be written in Title Case.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
+    <name>SQL Agent</name>
+
+    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+    <vendor url="https://github.com/mklaus">Klaus</vendor>
+
+    <!-- Description of the plugin displayed on the Plugin Page and in IDE Plugin Manager.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
+    <description><![CDATA[
+    <p>AI-powered SQL optimization assistant for IntelliJ IDEA.</p>
+    <p>SQL Agent helps you optimize your SQL queries by leveraging OpenCode AI to analyze:</p>
+    <ul>
+      <li>Performance issues and indexing opportunities</li>
+      <li>Query execution plans</li>
+      <li>SQL syntax and best practices</li>
+      <li>Resource usage and cost optimization</li>
+    </ul>
+    <p><strong>Features:</strong></p>
+    <ul>
+      <li>Right-click on any SQL to optimize with AI</li>
+      <li>Real-time metadata analysis from your database</li>
+      <li>Side-by-side diff view of original and optimized SQL</li>
+      <li>Support for MySQL and PostgreSQL</li>
+    </ul>
+  ]]></description>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends config-file="with-java.xml" optional="true">com.intellij.java</depends>
+
+    <!-- Extension points defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Application configurable for database settings -->
+        <applicationConfigurable parentId="tools"
+                                 instance="cn.mklaus.sqlagent.config.DatabaseConfigurable"
+                                 id="cn.mklaus.sqlagent"
+                                 displayName="SQL Agent"/>
+
+        <!-- Tool Window for displaying optimization results -->
+        <toolWindow id="SQL Agent"
+                    anchor="right"
+                    icon="/META-INF/pluginIcon.svg"
+                    factoryClass="cn.mklaus.sqlagent.ui.OptimizationToolWindowFactory"/>
+    </extensions>
+
+    <!-- Actions for plugin functionality -->
+    <actions>
+        <action id="SqlAgent.Optimize"
+                class="cn.mklaus.sqlagent.ui.OptimizeSqlAction"
+                text="Optimize SQL with AI"
+                description="Optimize selected SQL using OpenCode AI">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift O"/>
+        </action>
+    </actions>
+</idea-plugin>
