@@ -24,6 +24,7 @@
     <p><strong>Features:</strong></p>
     <ul>
       <li>Right-click on any SQL to optimize with AI</li>
+      <li>Click gutter icons in MyBatis mapper XML files to optimize SQL statements</li>
       <li>Real-time metadata analysis from your database</li>
       <li>Side-by-side diff view of original and optimized SQL</li>
       <li>Support for MySQL and PostgreSQL</li>
@@ -49,6 +50,10 @@
                     anchor="right"
                     icon="/META-INF/pluginIcon.svg"
                     factoryClass="cn.mklaus.sqlagent.ui.OptimizationToolWindowFactory"/>
+
+        <!-- Line Marker Provider for MyBatis Mapper XML files -->
+        <codeInsight.lineMarkerProvider language="XML"
+                                        implementationClass="cn.mklaus.sqlagent.mybatis.MyBatisSqlLineMarkerProvider"/>
     </extensions>
 
     <!-- Actions for plugin functionality -->

@@ -226,6 +226,15 @@ public class OptimizationPanel {
     }
 
     /**
+     * Set the optimization result without an editor (for MyBatis XML optimization)
+     * This is an overloaded method for XML-based SQL optimization where there's no active editor
+     */
+    public void setOptimizationResult(String originalSql, String optimizedSql,
+                                       OptimizationResponse response, Runnable applyCallback) {
+        setOptimizationResult(null, originalSql, optimizedSql, response, applyCallback);
+    }
+
+    /**
      * Clear the optimization result and disable the apply button
      */
     public void clearOptimizationResult() {
