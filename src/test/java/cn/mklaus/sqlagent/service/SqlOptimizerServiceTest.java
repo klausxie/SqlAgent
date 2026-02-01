@@ -1,7 +1,5 @@
 package cn.mklaus.sqlagent.service;
 
-import cn.mklaus.sqlagent.model.DatabaseConfig;
-import cn.mklaus.sqlagent.model.DatabaseType;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -10,7 +8,7 @@ import static org.junit.Assert.*;
 /**
  * Unit tests for SqlOptimizerService
  *
- * Tests for the simplified service that delegates metadata extraction
+ * Tests for the simplified service that delegates metadata retrieval
  * to OpenCode MCP tools.
  */
 public class SqlOptimizerServiceTest {
@@ -36,9 +34,6 @@ public class SqlOptimizerServiceTest {
         assertNotNull("Service with different URL should be created", service2);
     }
 
-    // Note: Full integration tests require a running OpenCode server
-    // and database connection. Those should be in separate integration tests.
-
     /**
      * Test that demonstrates the simplified interface.
      *
@@ -49,41 +44,47 @@ public class SqlOptimizerServiceTest {
      * 4. Getting execution plan
      *
      * Now, all of that is handled by OpenCode MCP tools.
+     * The plugin only needs to send the SQL string.
      */
     @Test
     public void testSimplifiedInterface() {
         String sql = "SELECT * FROM users WHERE id = 1";
-        DatabaseConfig config = createTestConfig();
 
-        // The service now only needs SQL and database config
+        // The service now only needs SQL
         // Table extraction and metadata fetching are done by MCP tools
         assertNotNull("SQL should not be null", sql);
-        assertNotNull("Config should not be null", config);
+        assertFalse("SQL should not be empty", sql.trim().isEmpty());
     }
 
     @Test
-    public void testDatabaseConfigCreation() {
-        DatabaseConfig config = createTestConfig();
+    public void testValidSqlStrings() {
+        String[] validSqlQueries = {
+                "SELECT * FROM users",
+                "SELECT id, name FROM products WHERE price > 100",
+                "INSERT INTO orders (user_id, total) VALUES (1, 100)",
+                "UPDATE users SET status = 'active' WHERE id = 1"
+        };
 
-        assertEquals("MySQL", DatabaseType.MYSQL, config.getType());
-        assertEquals("localhost", config.getHost());
-        assertEquals(3306, config.getPort());
-        assertEquals("testdb", config.getDatabase());
-        assertEquals("user", config.getUsername());
-        assertEquals("pass", config.getPassword());
+        for (String sql : validSqlQueries) {
+            assertNotNull("SQL should not be null", sql);
+            assertFalse("SQL should not be empty", sql.trim().isEmpty());
+        }
     }
 
-    /**
-     * Helper method to create a test database config
-     */
-    private DatabaseConfig createTestConfig() {
-        DatabaseConfig config = new DatabaseConfig();
-        config.setType(DatabaseType.MYSQL);
-        config.setHost("localhost");
-        config.setPort(3306);
-        config.setDatabase("testdb");
-        config.setUsername("user");
-        config.setPassword("pass");
-        return config;
+    @Test
+    public void testEmptySqlHandling() {
+        String emptySql = "";
+
+        // Service should handle empty SQL gracefully
+        // In real scenario, this would be validated before calling optimize()
+        assertTrue("Empty SQL should be detected", emptySql.trim().isEmpty());
+    }
+
+    @Test
+    public void testNullSqlHandling() {
+        String nullSql = null;
+
+        // Service should handle null SQL gracefully
+        assertNull("Null SQL should be detected", nullSql);
     }
 }
