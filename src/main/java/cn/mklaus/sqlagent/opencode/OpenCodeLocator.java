@@ -21,6 +21,132 @@ public class OpenCodeLocator {
     }
 
     /**
+     * Detect current platform
+     * @return Platform identifier in format "os-arch" (e.g., "darwin-x86-64")
+     */
+    private String detectPlatform() {
+        String osName = System.getProperty("os.name").toLowerCase();
+        String arch = System.getProperty("os.arch").toLowerCase();
+
+        String os;
+        if (osName.contains("mac")) {
+            os = "darwin";
+        } else if (osName.contains("linux")) {
+            os = "linux";
+        } else if (osName.contains("win")) {
+            os = "windows";
+        } else {
+            LOG.warn("Unknown OS: " + osName);
+            return null;
+        }
+
+        // Normalize architecture names
+        String normalizedArch;
+        if (arch.equals("aarch64") || arch.equals("arm64")) {
+            normalizedArch = "aarch64";
+        } else if (arch.contains("amd64") || arch.contains("x86_64") || arch.contains("x64")) {
+            normalizedArch = "x86-64";
+        } else {
+            LOG.warn("Unknown architecture: " + arch);
+            return null;
+        }
+
+        return os + "-" + normalizedArch;
+    }
+
+    /**
+     * Find OpenCode executable bundled with plugin
+     * @return File if found, null otherwise
+     */
+    private File findBundledExecutable() {
+        String platform = detectPlatform();
+        if (platform == null) {
+            LOG.debug("Could not detect platform for bundled executable");
+            return null;
+        }
+
+        String executableName = platform.contains("windows") ? "opencode.exe" : "opencode";
+        String resourcePath = "/bin/" + platform + "/" + executableName;
+
+        try {
+            // Get URL of bundled executable
+            java.net.URL resourceUrl = getClass().getResource(resourcePath);
+            if (resourceUrl == null) {
+                LOG.debug("Bundled OpenCode not found at: " + resourcePath);
+                return null;
+            }
+
+            // Convert URL to file path
+            String filePath = java.net.URLDecoder.decode(resourceUrl.getPath(), "UTF-8");
+
+            // Handle JAR URL format (jar:file:/path.jar!/bin/...)
+            if (filePath.contains("!")) {
+                // Extract to temp directory if in JAR
+                return extractBundledExecutable(resourcePath, executableName);
+            }
+
+            File bundledFile = new File(filePath);
+            if (bundledFile.exists() && bundledFile.canExecute()) {
+                LOG.info("Found bundled OpenCode at: " + bundledFile.getAbsolutePath());
+                return bundledFile;
+            }
+
+            // Make executable if needed
+            if (!platform.contains("windows")) {
+                bundledFile.setExecutable(true);
+            }
+
+            return bundledFile;
+
+        } catch (Exception e) {
+            LOG.warn("Failed to access bundled OpenCode: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Extract bundled executable from JAR to temp directory
+     */
+    private File extractBundledExecutable(String resourcePath, String executableName) {
+        try {
+            // Create temp directory for extracted binaries
+            File tempDir = new File(System.getProperty("java.io.tmpdir"), "sqlagent-opencode");
+            if (!tempDir.exists()) {
+                tempDir.mkdirs();
+            }
+
+            File extractedFile = new File(tempDir, executableName);
+
+            // Extract if not already extracted or version changed
+            if (!extractedFile.exists()) {
+                try (java.io.InputStream in = getClass().getResourceAsStream(resourcePath)) {
+                    if (in == null) {
+                        return null;
+                    }
+                    java.nio.file.Files.copy(
+                        in,
+                        extractedFile.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                    );
+                }
+
+                // Set executable permission
+                if (!resourcePath.contains("windows")) {
+                    extractedFile.setExecutable(true);
+                }
+
+                LOG.info("Extracted bundled OpenCode to: " + extractedFile.getAbsolutePath());
+            }
+
+            return extractedFile;
+
+        } catch (Exception e) {
+            LOG.warn("Failed to extract bundled OpenCode: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Find OpenCode executable file
      * @return File if found, null otherwise
      */
@@ -35,14 +161,21 @@ public class OpenCodeLocator {
             LOG.warn("Custom OpenCode path specified but not executable: " + customExecutablePath);
         }
 
-        // Priority 2: Check PATH environment variable
+        // Priority 2: Bundled executable
+        File bundledExecutable = findBundledExecutable();
+        if (bundledExecutable != null) {
+            LOG.info("Using bundled OpenCode executable");
+            return bundledExecutable;
+        }
+
+        // Priority 3: Check PATH environment variable
         File pathExecutable = findInPath();
         if (pathExecutable != null) {
             LOG.info("Found OpenCode in PATH: " + pathExecutable.getAbsolutePath());
             return pathExecutable;
         }
 
-        // Priority 3: Check common installation paths
+        // Priority 4: Check common installation paths
         File commonPathExecutable = findInCommonPaths();
         if (commonPathExecutable != null) {
             LOG.info("Found OpenCode in common path: " + commonPathExecutable.getAbsolutePath());

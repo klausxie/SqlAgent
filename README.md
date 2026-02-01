@@ -11,27 +11,42 @@ SqlAgent helps you write better, faster SQL queries by leveraging OpenCode AI to
 - **🔍 Smart Analysis** - Automatic metadata retrieval and execution plan analysis
 - **📊 Side-by-Side Diff** - Visual comparison of original and optimized SQL
 - **🗄️ Multi-Database Support** - MySQL, PostgreSQL (extensible via MCP)
+- **📦 OpenCode Bundled** - Works out of the box, no separate installation needed!
+
+## 📦 OpenCode Integration
+
+**Great news!** This plugin includes OpenCode executable, so you don't need to install it separately.
+
+### Supported Platforms
+
+- **macOS**: Intel (x86-64) and Apple Silicon (ARM64)
+- **Linux**: x86-64
+- **Windows**: x86-64
+
+### Automatic Detection
+
+The plugin automatically detects and uses the appropriate OpenCode executable:
+
+1. Custom path (if specified in settings)
+2. **Bundled OpenCode executable** (included with plugin)
+3. System-installed OpenCode (in PATH)
+4. Common installation paths
+
+### MCP Server Configuration
+
+While the plugin bundles OpenCode, you still need to configure MCP servers for database tools.
+
+See the configuration section below for details.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - **IntelliJ IDEA** 2024.3+
-- **OpenCode** - AI assistant server
 - **Python** 3.12+ (for MCP tools)
+- **OpenCode** is bundled with the plugin!
 
-### 1. Install OpenCode
-
-```bash
-# macOS
-brew install opencode
-opencode server
-
-# Verify installation
-open http://localhost:4096
-```
-
-### 2. Configure Database Tools MCP
+### 1. Configure Database Tools MCP
 
 Create `~/.opencode/opencode.json`:
 
@@ -60,7 +75,7 @@ Create `~/.opencode/opencode.json`:
 }
 ```
 
-### 3. Install Plugin
+### 2. Install Plugin
 
 **From Disk (Development)**
 
@@ -75,7 +90,7 @@ cd sqlagent
 
 Search "SqlAgent" in IDEA → Settings → Plugins → Marketplace
 
-### 4. Optimize Your SQL
+### 3. Optimize Your SQL
 
 **Option 1: Editor**
 

@@ -14,9 +14,9 @@ repositories {
 }
 
 dependencies {
-    // IntelliJ Platform - Target 2024.3 (latest stable)
+    // IntelliJ Platform - Target 2024.1
     intellijPlatform {
-        create("IC", "2024.3.2")
+        create("IC", "2024.1.7")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
         instrumentationTools()
 
@@ -52,14 +52,14 @@ dependencies {
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "243"
-            untilBuild = "243.*"
+            sinceBuild = "241"
+            untilBuild = "241.*"
         }
     }
 }
 
 tasks {
-    // Set the JVM compatibility versions (Java 17 for IntelliJ 2024.3)
+    // Set the JVM compatibility versions (Java 17 for IntelliJ 2024.1)
     withType<JavaCompile> {
         sourceCompatibility = "17"
         targetCompatibility = "17"
@@ -67,7 +67,38 @@ tasks {
 
     // Configure plugin.xml
     patchPluginXml {
-        sinceBuild.set("243")
-        untilBuild.set("243.*")
+        sinceBuild.set("241")
+        untilBuild.set("241.*")
+    }
+
+    // Set executable permission on bundled binaries (Unix only)
+    register("chmodBinaries") {
+        group = "build"
+        description = "Set executable permission on bundled OpenCode binaries"
+
+        onlyIf {
+            !System.getProperty("os.name").lowercase().contains("windows")
+        }
+
+        doLast {
+            val binDir = file("src/main/resources/bin")
+            if (binDir.exists()) {
+                binDir.listFiles()?.filter { it.isDirectory }?.forEach { platformDir ->
+                    platformDir.listFiles()?.filter { it.name == "opencode" }?.forEach { binary ->
+                        binary.setExecutable(true)
+                        println("Made executable: ${binary.name}")
+                    }
+                }
+            }
+        }
+    }
+
+    // Ensure binaries are executable before building
+    named("build") {
+        dependsOn("chmodBinaries")
+    }
+
+    named("prepareSandbox") {
+        dependsOn("chmodBinaries")
     }
 }

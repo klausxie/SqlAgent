@@ -226,21 +226,25 @@ public class OpenCodeServerManager {
         String osName = System.getProperty("os.name").toLowerCase();
 
         StringBuilder sb = new StringBuilder();
-        sb.append("未找到 OpenCode 安装。\n\n");
-        sb.append("请安装 OpenCode:\n\n");
+        sb.append("未找到 OpenCode 可执行文件。\n\n");
+        sb.append("插件应包含 OpenCode 可执行文件，但似乎未正确安装。\n\n");
+        sb.append("建议操作:\n");
+        sb.append("  1. 重新安装插件\n");
+        sb.append("  2. 检查插件完整性\n");
+        sb.append("  3. 或手动安装 OpenCode：\n\n");
 
         if (osName.contains("mac")) {
-            sb.append("  macOS:\n");
+            sb.append("    macOS:\n");
             sb.append("    brew install opencode\n\n");
         } else if (osName.contains("linux")) {
-            sb.append("  Linux:\n");
-            sb.append("    curl -sSL https://get.opencode.dev | sh\n\n");
+            sb.append("    Linux:\n");
+            sb.append("    npm install -g opencode-ai\n\n");
         } else if (osName.contains("win")) {
-            sb.append("  Windows:\n");
-            sb.append("    下载安装程序: https://opencode.dev/download\n\n");
+            sb.append("    Windows:\n");
+            sb.append("    npm install -g opencode-ai\n\n");
         }
 
-        sb.append("或在设置中指定自定义路径。");
+        sb.append("或在设置中指定自定义 OpenCode 可执行文件路径。");
         return sb.toString();
     }
 
