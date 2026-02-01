@@ -2,7 +2,6 @@ package cn.mklaus.sqlagent.ui;
 
 import cn.mklaus.sqlagent.model.OptimizationResponse;
 import cn.mklaus.sqlagent.model.OptimizationSuggestion;
-import cn.mklaus.sqlagent.service.OptimizationHistoryService;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
@@ -27,9 +26,6 @@ public class OptimizationPanel {
     private JProgressBar progressBar;
     private JButton applyButton;
 
-    // History service
-    private final OptimizationHistoryService historyService;
-
     // Store optimization result for applying
     private Editor editor;
     private String originalSql;
@@ -37,14 +33,10 @@ public class OptimizationPanel {
     private OptimizationResponse response;
     private Runnable applyCallback;
 
-    // Store current SQL for history saving
-    private String currentOriginalSql;
-
     private static final int MAX_LOG_LINES = 100; // Limit log lines to prevent EDT freeze
 
     public OptimizationPanel(Project project) {
         this.project = project;
-        this.historyService = new OptimizationHistoryService();
         initUI();
     }
 
@@ -62,29 +54,6 @@ public class OptimizationPanel {
         topPanel.add(progressBar, BorderLayout.SOUTH);
 
         mainPanel.add(topPanel, BorderLayout.NORTH);
-
-        // Tabbed pane for Optimization and History
-        JTabbedPane tabbedPane = new JTabbedPane();
-
-        // Optimization tab
-        JPanel optimizationTab = createOptimizationTab();
-        tabbedPane.addTab("Optimization", optimizationTab);
-
-        // History tab
-        HistoryPanel historyPanel = new HistoryPanel();
-        tabbedPane.addTab("History", historyPanel.getPanel());
-
-        mainPanel.add(tabbedPane, BorderLayout.CENTER);
-
-        log("SQL Agent tool window ready");
-        log("Right-click on SQL in editor and select 'Optimize SQL with AI'");
-    }
-
-    /**
-     * Create optimization tab content
-     */
-    private JPanel createOptimizationTab() {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
 
         // Center panel: Split log and metadata
         JSplitPane centerSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
@@ -106,7 +75,7 @@ public class OptimizationPanel {
         JScrollPane metadataScroll = new JScrollPane(metadataPanel);
         centerSplit.setBottomComponent(metadataScroll);
 
-        panel.add(centerSplit, BorderLayout.CENTER);
+        mainPanel.add(centerSplit, BorderLayout.CENTER);
 
         // Bottom panel: Suggestions list and Apply button
         JPanel bottomPanel = new JPanel(new BorderLayout(5, 5));
@@ -128,41 +97,16 @@ public class OptimizationPanel {
         applyButton.addActionListener(e -> {
             if (applyCallback != null) {
                 applyCallback.run();
-                // Mark as applied in history
-                if (currentOriginalSql != null && optimizedSql != null) {
-                    String hash = generateSqlHash(currentOriginalSql);
-                    historyService.markAsApplied(hash);
-                }
             }
         });
         JPanel buttonPanel = new JPanel(new BorderLayout());
         buttonPanel.add(applyButton, BorderLayout.NORTH);
         bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
 
-        panel.add(bottomPanel, BorderLayout.SOUTH);
+        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
-        return panel;
-    }
-
-    /**
-     * Generate hash for SQL
-     */
-    private String generateSqlHash(String sql) {
-        try {
-            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
-            byte[] hash = md.digest(sql.getBytes());
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString().substring(0, 8);
-        } catch (java.security.NoSuchAlgorithmException e) {
-            return String.valueOf(sql.hashCode());
-        }
+        log("SQL Agent tool window ready");
+        log("Right-click on SQL in editor and select 'Optimize SQL with AI'");
     }
 
     public JPanel getPanel() {
@@ -256,17 +200,6 @@ public class OptimizationPanel {
                 }
             }
         });
-
-        // Save to history (only if we have original SQL)
-        if (response != null && !response.hasError() && originalSql != null && response.getOptimizedSql() != null) {
-            currentOriginalSql = originalSql;
-            optimizedSql = response.getOptimizedSql();
-            historyService.addToHistory(
-                    originalSql,
-                    response.getOptimizedSql(),
-                    response.getExplanation()
-            );
-        }
     }
 
     public void clearSuggestions() {
@@ -282,7 +215,6 @@ public class OptimizationPanel {
                                        OptimizationResponse response, Runnable applyCallback) {
         this.editor = editor;
         this.originalSql = originalSql;
-        this.currentOriginalSql = originalSql;
         this.optimizedSql = optimizedSql;
         this.response = response;
         this.applyCallback = applyCallback;
@@ -308,7 +240,6 @@ public class OptimizationPanel {
     public void clearOptimizationResult() {
         this.editor = null;
         this.originalSql = null;
-        this.currentOriginalSql = null;
         this.optimizedSql = null;
         this.response = null;
         this.applyCallback = null;
