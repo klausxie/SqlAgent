@@ -10,6 +10,9 @@ import static org.junit.Assert.*;
 
 /**
  * Unit tests for PromptBuilder
+ *
+ * Tests for the simplified prompt builder that delegates metadata retrieval
+ * to OpenCode MCP tools.
  */
 public class PromptBuilderTest {
 
@@ -20,56 +23,17 @@ public class PromptBuilderTest {
     public void setUp() {
         promptBuilder = new PromptBuilder();
 
-        // Create a test request
+        // Create a test request (simplified - no database config)
         request = new OptimizationRequest();
-
-        // Set database config
-        DatabaseConfig dbConfig = new DatabaseConfig();
-        dbConfig.setType(DatabaseType.MYSQL);
-        dbConfig.setHost("localhost");
-        dbConfig.setPort(3306);
-        dbConfig.setDatabase("testdb");
-        request.setDatabase(dbConfig);
 
         // Set SQL
         request.setOriginalSql("SELECT * FROM users WHERE email = 'test@example.com'");
 
-        // Set table metadata
-        TableMetadata metadata = new TableMetadata();
-        metadata.setTableName("users");
-        metadata.setRowCount(1000000);
-
-        // Add columns
-        ColumnInfo idColumn = new ColumnInfo();
-        idColumn.setColumnName("id");
-        idColumn.setTypeName("BIGINT");
-        idColumn.setPrimaryKey(true);
-
-        ColumnInfo emailColumn = new ColumnInfo();
-        emailColumn.setColumnName("email");
-        emailColumn.setTypeName("VARCHAR(255)");
-
-        metadata.setColumns(Arrays.asList(idColumn, emailColumn));
-
-        // Add indexes
-        IndexInfo index = new IndexInfo();
-        index.setIndexName("idx_email");
-        index.addColumnName("email");
-        index.setUnique(true);
-        metadata.setIndexes(Arrays.asList(index));
-
-        request.setTableMetadata(metadata);
-
-        // Set execution plan
-        request.setExecutionPlan(
-                "-> Filter: (email = 'test@example.com')  (cost=100050.00 rows=100000)\n" +
-                "   -> Table scan on users  (cost=100050.00 rows=100000)"
-        );
-
         // Set optimization goals
         request.setOptimizationGoals(Arrays.asList(
-                "Performance optimization",
-                "Index usage"
+                "Performance optimization (index usage, execution plan)",
+                "Cost optimization (resource usage)",
+                "Syntax corrections and best practices"
         ));
     }
 
@@ -82,11 +46,11 @@ public class PromptBuilderTest {
 
         // Verify prompt contains key sections
         assertTrue(prompt.contains("Original Query"));
-        assertTrue(prompt.contains("Database Context"));
-        assertTrue(prompt.contains("Table Schema"));
-        assertTrue(prompt.contains("Indexes"));
-        assertTrue(prompt.contains("Current Execution Plan"));
         assertTrue(prompt.contains("Optimization Goals"));
+
+        // Verify prompt references MCP tools and Skill
+        assertTrue(prompt.contains("sql-optimizer") || prompt.contains("database-tools"));
+        assertTrue(prompt.contains("MCP") || prompt.contains("tools"));
     }
 
     @Test
@@ -98,53 +62,30 @@ public class PromptBuilderTest {
 
     @Test
     public void testBuildPrompt_ContainsDatabaseInfo() {
+        // Note: Database info is no longer included in prompt
+        // It's configured in MCP server environment variables
         String prompt = promptBuilder.buildPrompt(request);
 
-        assertTrue(prompt.contains("MySQL"));
-        assertTrue(prompt.contains("testdb"));
-        assertTrue(prompt.contains("users"));
+        // Should mention MCP server has the database config
+        assertTrue(prompt.contains("MCP server") || prompt.contains("database-tools"));
     }
 
     @Test
-    public void testBuildPrompt_ContainsMetadata() {
+    public void testBuildPrompt_ReferencesMCPTools() {
         String prompt = promptBuilder.buildPrompt(request);
 
-        // formatNumber converts 1000000 to "1.0M"
-        assertTrue(prompt.contains("1.0M") || prompt.contains("1000000")); // row count formatted
-        assertTrue(prompt.contains("id"));
-        assertTrue(prompt.contains("email"));
-        assertTrue(prompt.contains("idx_email"));
-    }
-
-    @Test
-    public void testBuildPrompt_ContainsExecutionPlan() {
-        String prompt = promptBuilder.buildPrompt(request);
-
-        assertTrue(prompt.contains("Filter: (email ="));
-        assertTrue(prompt.contains("Table scan"));
-    }
-
-    @Test
-    public void testBuildPrompt_WithEmptyMetadata() {
-        TableMetadata emptyMetadata = new TableMetadata();
-        emptyMetadata.setTableName("test_table");
-        emptyMetadata.setRowCount(0);
-        request.setTableMetadata(emptyMetadata);
-
-        String prompt = promptBuilder.buildPrompt(request);
-
-        assertNotNull(prompt);
-        assertTrue(prompt.contains("test_table"));
+        // Verify prompt mentions MCP tools for metadata retrieval
+        assertTrue(prompt.contains("database-tools") || prompt.contains("MCP"));
     }
 
     @Test
     public void testBuildPrompt_WithPostgreSQL() {
-        request.getDatabase().setType(DatabaseType.POSTGRESQL);
-        request.getDatabase().setPort(5432);
-
+        // Note: Database type is no longer included in prompt
+        // MCP server determines the database type from its environment
         String prompt = promptBuilder.buildPrompt(request);
 
-        assertTrue(prompt.contains("PostgreSQL"));
+        assertNotNull(prompt);
+        assertTrue(prompt.contains("Original Query"));
     }
 
     @Test
@@ -153,5 +94,39 @@ public class PromptBuilderTest {
 
         // Verify prompt requests JSON response format
         assertTrue(prompt.contains("JSON") || prompt.contains("json") || prompt.contains("format"));
+    }
+
+    @Test
+    public void testBuildPrompt_ContainsOptimizationGoals() {
+        String prompt = promptBuilder.buildPrompt(request);
+
+        assertTrue(prompt.contains("Performance optimization"));
+        assertTrue(prompt.contains("Cost optimization"));
+    }
+
+    @Test
+    public void testBuildPrompt_WithoutMetadata() {
+        // In the new implementation, metadata is not included in the prompt
+        // It's retrieved by OpenCode MCP tools
+        String prompt = promptBuilder.buildPrompt(request);
+
+        // Prompt should not contain metadata sections
+        assertFalse(prompt.contains("Table Schema"));
+        assertFalse(prompt.contains("Indexes"));
+        assertFalse(prompt.contains("Current Execution Plan"));
+
+        // But should mention using MCP tools to get this info
+        assertTrue(prompt.contains("database-tools") || prompt.contains("MCP"));
+    }
+
+    @Test
+    public void testBuildPrompt_EmptyGoals() {
+        request.setOptimizationGoals(null);
+
+        String prompt = promptBuilder.buildPrompt(request);
+
+        assertNotNull(prompt);
+        // Should still contain essential parts even without goals
+        assertTrue(prompt.contains("Original Query"));
     }
 }

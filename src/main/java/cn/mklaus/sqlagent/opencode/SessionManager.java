@@ -25,10 +25,11 @@ public class SessionManager {
         this.gson = new Gson();
 
         // Configure HTTP client with timeouts
+        // AI optimization can take time, especially with MCP tool calls
         this.httpClient = new OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .writeTimeout(60, TimeUnit.SECONDS)
-                .readTimeout(120, TimeUnit.SECONDS)
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(300, TimeUnit.SECONDS)  // 5 minutes for AI + MCP tools
                 .build();
     }
 
@@ -55,7 +56,9 @@ public class SessionManager {
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                throw new IOException("Failed to create session: " + response.code());
+                String errorBody = response.body() != null ? response.body().string() : "No response body";
+                throw new IOException("Failed to create session: " + response.code() + " " + response.message() +
+                        ". Server response: " + errorBody);
             }
 
             JsonObject json = parseJsonResponse(response);

@@ -36,6 +36,7 @@ public class OpenCodeClient {
             // Build the prompt
             PromptBuilder promptBuilder = new PromptBuilder();
             String prompt = promptBuilder.buildPrompt(request);
+            LOG.info(prompt);
 
             // Send message to session
             String responseJson = sendMessage(sessionId, prompt);
@@ -45,8 +46,24 @@ public class OpenCodeClient {
 
         } catch (Exception e) {
             LOG.error("Optimization failed", e);
+
+            // Provide helpful error messages
+            String errorMsg = e.getMessage();
+            if (errorMsg != null) {
+                if (errorMsg.contains("Failed to create session") || errorMsg.contains("Connection refused")) {
+                    errorMsg = "Cannot connect to OpenCode server at " + sessionManager.getServerUrl() +
+                            ". Please ensure OpenCode is running.";
+                } else if (errorMsg.contains("timeout") || errorMsg.contains("timed out")) {
+                    errorMsg = "Request timed out. The AI optimization may be processing, " +
+                            "or the MCP database connection may be slow. Please check:\n" +
+                            "1. OpenCode is running\n" +
+                            "2. database-tools MCP is configured in ~/.opencode/config.json\n" +
+                            "3. Database connection is valid";
+                }
+            }
+
             OptimizationResponse errorResponse = new OptimizationResponse();
-            errorResponse.setErrorMessage("Optimization failed: " + e.getMessage());
+            errorResponse.setErrorMessage("Optimization failed: " + errorMsg);
             return errorResponse;
         }
     }

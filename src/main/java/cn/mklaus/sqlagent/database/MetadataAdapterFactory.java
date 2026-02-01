@@ -5,7 +5,11 @@ import cn.mklaus.sqlagent.model.DatabaseType;
 
 /**
  * Factory for creating appropriate metadata adapters based on database type
+ *
+ * @deprecated Database metadata operations are now handled by OpenCode MCP tools.
+ *             This factory is kept for potential future use but is no longer used by the plugin.
  */
+@Deprecated
 public class MetadataAdapterFactory {
 
     /**

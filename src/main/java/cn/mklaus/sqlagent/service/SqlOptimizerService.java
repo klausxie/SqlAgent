@@ -1,18 +1,16 @@
 package cn.mklaus.sqlagent.service;
 
-import cn.mklaus.sqlagent.database.DatabaseConnectionManager;
-import cn.mklaus.sqlagent.database.MetadataAdapter;
-import cn.mklaus.sqlagent.database.MetadataAdapterFactory;
 import cn.mklaus.sqlagent.model.*;
 import cn.mklaus.sqlagent.opencode.OpenCodeClient;
 import com.intellij.openapi.diagnostic.Logger;
 
-import java.sql.Connection;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * Service for orchestrating SQL optimization
+ *
+ * Simplified version - database operations are now handled by OpenCode MCP tools.
+ * The plugin only sends SQL; database configuration is managed by OpenCode MCP server.
  */
 public class SqlOptimizerService {
     private static final Logger LOG = Logger.getInstance(SqlOptimizerService.class);
@@ -25,39 +23,32 @@ public class SqlOptimizerService {
 
     /**
      * Optimize a SQL query
+     *
+     * This method now only sends the SQL to OpenCode.
+     * OpenCode will use the database-tools MCP server to:
+     * - Parse the SQL to extract table names
+     * - Get table metadata (columns, indexes, row counts)
+     * - Get the execution plan
+     *
+     * Database configuration is managed by OpenCode MCP tools in ~/.opencode/config.json
+     *
+     * @param originalSql The SQL query to optimize
+     * @return Optimization response with optimized SQL and suggestions
      */
-    public OptimizationResponse optimize(
-            String originalSql,
-            DatabaseConfig databaseConfig,
-            String tableName
-    ) {
+    public OptimizationResponse optimize(String originalSql) {
         try {
             LOG.info("Starting optimization for SQL: " + originalSql.substring(0, Math.min(50, originalSql.length())) + "...");
 
-            DatabaseConnectionManager connectionManager = DatabaseConnectionManager.getInstance();
-            try (Connection conn = connectionManager.getConnection(databaseConfig)) {
+            // Build simplified request - just SQL, no database config
+            OptimizationRequest request = buildOptimizationRequest(originalSql);
 
-                MetadataAdapter metadataAdapter = MetadataAdapterFactory.getAdapter(databaseConfig);
-                TableMetadata metadata = metadataAdapter.extractTableMetadata(conn, tableName);
-                metadataAdapter.markPrimaryKeys(conn, metadata);
+            // Send to OpenCode - AI will use MCP tools to gather metadata and execution plan
+            OpenCodeClient client = new OpenCodeClient(openCodeServerUrl);
+            OptimizationResponse response = client.optimize(request);
 
-                LOG.info("Extracted metadata: " + metadata.getColumns().size() + " columns, " +
-                        metadata.getIndexes().size() + " indexes");
+            LOG.info("Optimization completed. Has error: " + response.hasError());
 
-                String executionPlan = metadataAdapter.getExecutionPlan(conn, originalSql);
-
-                OptimizationRequest request = buildOptimizationRequest(originalSql, databaseConfig, metadata, executionPlan);
-
-                OpenCodeClient client = new OpenCodeClient(openCodeServerUrl);
-                OptimizationResponse response = client.optimize(request);
-
-                LOG.info("Optimization completed. Has error: " + response.hasError());
-
-                return response;
-
-            } catch (Exception e) {
-                throw new RuntimeException("Optimization failed", e);
-            }
+            return response;
 
         } catch (Exception e) {
             LOG.error("Service error", e);
@@ -66,15 +57,14 @@ public class SqlOptimizerService {
     }
 
     /**
-     * Build optimization request with all required data
+     * Build optimization request with SQL only
+     *
+     * Note: Metadata and execution plan are retrieved by OpenCode using MCP tools.
+     * Database configuration is managed by MCP server environment variables.
      */
-    private OptimizationRequest buildOptimizationRequest(String originalSql, DatabaseConfig databaseConfig,
-                                                         TableMetadata metadata, String executionPlan) {
+    private OptimizationRequest buildOptimizationRequest(String originalSql) {
         OptimizationRequest request = new OptimizationRequest();
         request.setOriginalSql(originalSql);
-        request.setDatabase(databaseConfig);
-        request.setTableMetadata(metadata);
-        request.setExecutionPlan(executionPlan);
         request.setOptimizationGoals(Arrays.asList(
                 "Performance optimization (index usage, execution plan)",
                 "Cost optimization (resource usage)",
@@ -90,45 +80,5 @@ public class SqlOptimizerService {
         OptimizationResponse response = new OptimizationResponse();
         response.setErrorMessage(errorMessage);
         return response;
-    }
-
-    /**
-     * Extract table name from SQL query
-     */
-    public String extractTableName(String sql) {
-        // Handle null or empty input
-        if (sql == null || sql.trim().isEmpty()) {
-            return null;
-        }
-
-        // Simple extraction - in production, use a proper SQL parser
-        String lowerSql = sql.toLowerCase();
-
-        // Find FROM clause
-        int fromIndex = lowerSql.indexOf("from ");
-        if (fromIndex == -1) {
-            fromIndex = lowerSql.indexOf("into ");
-        }
-
-        if (fromIndex != -1) {
-            int start = fromIndex + 5;
-            int end = lowerSql.length();
-
-            // Find end of table name
-            for (int i = start; i < lowerSql.length(); i++) {
-                char c = lowerSql.charAt(i);
-                if (c == ' ' || c == '\n' || c == '\t' || c == ',' || c == ';') {
-                    end = i;
-                    break;
-                }
-            }
-
-            String tableName = sql.substring(start, end).trim();
-            // Remove backticks if present
-            tableName = tableName.replace("`", "");
-            return tableName;
-        }
-
-        return null;
     }
 }

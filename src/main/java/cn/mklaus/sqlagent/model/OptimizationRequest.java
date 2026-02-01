@@ -4,12 +4,12 @@ import java.util.List;
 
 /**
  * Optimization request model for OpenCode API
+ *
+ * Simplified version - only contains SQL and optimization goals.
+ * Database metadata is retrieved by OpenCode MCP tools.
  */
 public class OptimizationRequest {
     private String originalSql;
-    private DatabaseConfig database;
-    private TableMetadata tableMetadata;
-    private String executionPlan;
     private List<String> optimizationGoals;
 
     public OptimizationRequest() {
@@ -21,30 +21,6 @@ public class OptimizationRequest {
 
     public void setOriginalSql(String originalSql) {
         this.originalSql = originalSql;
-    }
-
-    public DatabaseConfig getDatabase() {
-        return database;
-    }
-
-    public void setDatabase(DatabaseConfig database) {
-        this.database = database;
-    }
-
-    public TableMetadata getTableMetadata() {
-        return tableMetadata;
-    }
-
-    public void setTableMetadata(TableMetadata tableMetadata) {
-        this.tableMetadata = tableMetadata;
-    }
-
-    public String getExecutionPlan() {
-        return executionPlan;
-    }
-
-    public void setExecutionPlan(String executionPlan) {
-        this.executionPlan = executionPlan;
     }
 
     public List<String> getOptimizationGoals() {

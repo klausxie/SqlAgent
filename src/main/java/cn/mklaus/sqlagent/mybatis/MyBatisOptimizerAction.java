@@ -1,7 +1,5 @@
 package cn.mklaus.sqlagent.mybatis;
 
-import cn.mklaus.sqlagent.config.DatabaseConfigStore;
-import cn.mklaus.sqlagent.model.DatabaseConfig;
 import cn.mklaus.sqlagent.model.OptimizationResponse;
 import cn.mklaus.sqlagent.service.SqlOptimizerService;
 import cn.mklaus.sqlagent.ui.DiffViewer;
@@ -33,6 +31,9 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * Action triggered by clicking gutter icon in MyBatis mapper XML files
+ *
+ * Simplified version - database operations (metadata, execution plan) are now
+ * handled by OpenCode MCP tools. This action only sends SQL and database config.
  */
 public class MyBatisOptimizerAction extends AnAction {
     private static final String OPENCODE_SERVER_URL = "http://localhost:4096";
@@ -74,15 +75,8 @@ public class MyBatisOptimizerAction extends AnAction {
      * Common optimization logic
      */
     private void performOptimization(Project project) {
-        // Validate database configuration
-        DatabaseConfig config = DatabaseConfigStore.getInstance().getConfig();
-        if (config == null) {
-            Messages.showWarningDialog(
-                    "Please configure a database connection in Settings → Tools → SQL Agent first.",
-                    "No Database Configuration"
-            );
-            return;
-        }
+        // Note: Database configuration is now managed by OpenCode MCP tools
+        // Database connection is configured in ~/.opencode/config.json
 
         // Show tool window
         showToolWindow(project);
@@ -103,16 +97,11 @@ public class MyBatisOptimizerAction extends AnAction {
                     }
 
                     SqlOptimizerService optimizer = new SqlOptimizerService(OPENCODE_SERVER_URL);
-                    String tableName = optimizer.extractTableName(originalSql);
 
-                    updateProgress(indicator, panel, "Extracting table metadata...", 0.3, 30);
-                    if (panel != null && tableName != null) {
-                        panel.log("Target table: " + tableName);
-                    }
+                    updateProgress(indicator, panel, "Optimizing with AI...", 0.5, 50);
 
-                    updateProgress(indicator, panel, "Optimizing with AI...", 0.6, 60);
-
-                    response = optimizer.optimize(originalSql, config, tableName);
+                    // Simplified: Only send SQL, database config managed by MCP
+                    response = optimizer.optimize(originalSql);
 
                     updateProgress(indicator, panel, "Processing results...", 0.9, 90);
 

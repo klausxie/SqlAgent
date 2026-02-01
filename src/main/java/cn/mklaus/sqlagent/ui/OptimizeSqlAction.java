@@ -1,8 +1,5 @@
 package cn.mklaus.sqlagent.ui;
 
-import cn.mklaus.sqlagent.config.DatabaseConfigStore;
-import cn.mklaus.sqlagent.database.DatabaseConnectionManager;
-import cn.mklaus.sqlagent.database.MySQLMetadataAdapter;
 import cn.mklaus.sqlagent.model.*;
 import cn.mklaus.sqlagent.service.SqlOptimizerService;
 import com.intellij.notification.Notification;
@@ -25,11 +22,11 @@ import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowManager;
 import org.jetbrains.annotations.NotNull;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-
 /**
  * Action for optimizing SQL from editor context menu
+ *
+ * Simplified version - database operations (metadata, execution plan) are now
+ * handled by OpenCode MCP tools. This action only sends SQL and database config.
  */
 public class OptimizeSqlAction extends AnAction {
 
@@ -54,14 +51,9 @@ public class OptimizeSqlAction extends AnAction {
             return;
         }
 
-        DatabaseConfig config = DatabaseConfigStore.getInstance().getConfig();
-        if (config == null) {
-            showWarningDialog(
-                    "Please configure a database connection in Settings → Tools → SQL Agent first.",
-                    "No Database Configuration"
-            );
-            return;
-        }
+        // Note: Database configuration is now managed by OpenCode MCP tools
+        // The plugin only sends SQL; OpenCode uses database-tools MCP to connect
+        // Database connection is configured in ~/.opencode/config.json
 
         showToolWindow(project);
 
@@ -78,11 +70,11 @@ public class OptimizeSqlAction extends AnAction {
 
                     SqlOptimizerService optimizer = new SqlOptimizerService(OPENCODE_SERVER_URL);
 
-                    String tableName = extractTableName(optimizer, selectedSql);
-                    displayMetadata(panel, config, tableName);
-                    updateProgress(indicator, panel, "Optimizing with AI...", 0.6, 60);
+                    updateProgress(indicator, panel, "Optimizing with AI...", 0.3, 30);
+                    panel.log("Starting optimization...");
 
-                    response = optimizer.optimize(selectedSql.trim(), config, tableName);
+                    // Simplified: Only send SQL, database config is managed by OpenCode MCP
+                    response = optimizer.optimize(selectedSql.trim());
 
                     finalizeOptimization(indicator, panel, response);
 
@@ -99,38 +91,6 @@ public class OptimizeSqlAction extends AnAction {
                 }
             }
 
-            private String extractTableName(SqlOptimizerService optimizer, String sql) {
-                updateProgress(null, panel, "Analyzing SQL query...", 0.2, 20);
-
-                String tableName = optimizer.extractTableName(sql);
-                if (tableName == null) {
-                    throw new IllegalArgumentException("Could not extract table name from SQL");
-                }
-
-                if (panel != null) {
-                    panel.addMetadata("Table", tableName);
-                }
-                return tableName;
-            }
-
-            private void displayMetadata(OptimizationPanel panel, DatabaseConfig config, String tableName) {
-                updateProgress(null, panel, "Fetching metadata...", 0.4, 40);
-
-                DatabaseConnectionManager connectionManager = DatabaseConnectionManager.getInstance();
-                try (Connection conn = connectionManager.getConnection(config)) {
-                    MySQLMetadataAdapter metadataAdapter = new MySQLMetadataAdapter();
-                    TableMetadata metadata = metadataAdapter.extractTableMetadata(conn, tableName);
-
-                    if (panel != null && metadata != null) {
-                        panel.addMetadata("Row Count", String.format("%,d", metadata.getRowCount()));
-                        panel.addMetadata("Columns", String.valueOf(metadata.getColumns().size()));
-                        panel.addMetadata("Indexes", String.valueOf(metadata.getIndexes().size()));
-                    }
-                } catch (SQLException e) {
-                    throw new RuntimeException("Failed to fetch metadata", e);
-                }
-            }
-
             private void finalizeOptimization(ProgressIndicator indicator, OptimizationPanel panel,
                                              OptimizationResponse response) {
                 updateProgress(indicator, panel, "Processing results...", 0.9, 90);
@@ -138,6 +98,7 @@ public class OptimizeSqlAction extends AnAction {
                 if (panel != null) {
                     panel.addSuggestion(response);
                     panel.setStatus("Optimization completed", false);
+                    panel.log("Optimization completed successfully");
                 }
 
                 if (indicator != null) {
@@ -154,6 +115,7 @@ public class OptimizeSqlAction extends AnAction {
                 }
                 if (panel != null) {
                     panel.setProgress(percent);
+                    panel.log(text);
                 }
             }
 

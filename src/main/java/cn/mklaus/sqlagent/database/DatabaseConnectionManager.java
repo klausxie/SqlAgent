@@ -13,7 +13,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Database connection manager using HikariCP connection pool
+ *
+ * @deprecated Database operations are now handled by OpenCode MCP tools.
+ *             This class is kept for potential future use but is no longer used by the plugin.
  */
+@Deprecated
 public class DatabaseConnectionManager {
     private static final Logger LOG = Logger.getInstance(DatabaseConnectionManager.class);
 

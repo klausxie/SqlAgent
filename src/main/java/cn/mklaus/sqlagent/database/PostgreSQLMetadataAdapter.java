@@ -8,7 +8,11 @@ import java.sql.*;
 
 /**
  * PostgreSQL metadata adapter for extracting table metadata
+ *
+ * @deprecated Database metadata operations are now handled by OpenCode MCP tools.
+ *             This adapter is kept for potential future use but is no longer used by the plugin.
  */
+@Deprecated
 public class PostgreSQLMetadataAdapter implements MetadataAdapter {
 
     private static final String EXPLAIN_FORMAT = "TEXT";

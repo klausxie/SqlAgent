@@ -8,7 +8,11 @@ import java.sql.SQLException;
 /**
  * Interface for database metadata adapters
  * Provides abstraction for extracting metadata from different database types
+ *
+ * @deprecated Database metadata operations are now handled by OpenCode MCP tools.
+ *             This interface is kept for potential future use but is no longer used by the plugin.
  */
+@Deprecated
 public interface MetadataAdapter {
 
     /**
