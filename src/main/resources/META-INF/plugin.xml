@@ -39,17 +39,11 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Application service for plugin settings -->
-        <applicationService serviceImplementation="cn.mklaus.sqlagent.SqlAgentSettings"/>
-
         <!-- Application configurable for plugin settings -->
         <applicationConfigurable parentId="tools"
                                  instance="cn.mklaus.sqlagent.config.SqlAgentConfigurable"
                                  id="cn.mklaus.sqlagent"
                                  displayName="SQL Agent"/>
-
-        <!-- Startup activity for first-run wizard -->
-        <postStartupActivity implementation="cn.mklaus.sqlagent.FirstRunStartupActivity"/>
 
         <!-- SQL optimization inspection -->
         <localInspection displayName="SQL Optimization"
@@ -78,13 +72,6 @@
                 description="Optimize selected SQL using OpenCode AI">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift O"/>
-        </action>
-
-        <action id="SqlAgent.ShowSetupWizard"
-                class="cn.mklaus.sqlagent.ui.ShowWizardAction"
-                text="Show Setup Wizard"
-                description="Show SqlAgent setup wizard">
-            <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
     </actions>
 </idea-plugin>
