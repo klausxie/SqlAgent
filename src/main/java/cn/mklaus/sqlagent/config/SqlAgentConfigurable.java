@@ -1,5 +1,6 @@
 package cn.mklaus.sqlagent.config;
 
+import cn.mklaus.sqlagent.mcp.McpServerLifecycleService;
 import cn.mklaus.sqlagent.opencode.ConnectionTester;
 import cn.mklaus.sqlagent.opencode.OpenCodeLocator;
 import com.intellij.notification.Notification;
@@ -33,12 +34,23 @@ public class SqlAgentConfigurable implements Configurable {
     private JButton autoDetectButton;
     private JCheckBox stopServerOnExitCheckBox;
 
+    // Database configuration fields
+    private JComboBox<String> dbTypeComboBox;
+    private JTextField dbHostField;
+    private JTextField dbPortField;
+    private JTextField dbDatabaseField;
+    private JTextField dbUsernameField;
+    private JPasswordField dbPasswordField;
+
     public static class State {
         public String serverUrl = "http://localhost:4096";
         public int timeout = 300;
         public boolean autoStartServer = true;
         public String openCodeExecutablePath = "";
         public boolean stopServerOnExit = false;
+
+        // Database configuration for MCP server
+        public DatabaseConfig databaseConfig = new DatabaseConfig();
     }
 
     private State getState() {
@@ -138,6 +150,111 @@ public class SqlAgentConfigurable implements Configurable {
         pathPanel.add(autoDetectButton, BorderLayout.EAST);
 
         mainPanel.add(pathPanel, gbc);
+
+        row++;
+
+        // Separator for database configuration
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        mainPanel.add(new JSeparator(), gbc);
+
+        row++;
+
+        // Database Configuration Section Label
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 2;
+        JLabel dbSectionLabel = new JLabel("<html><b>Database Configuration (for SQL Analysis)</b></html>");
+        mainPanel.add(dbSectionLabel, gbc);
+
+        row++;
+
+        // Database Type
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
+        JLabel dbTypeLabel = new JLabel("Database Type:");
+        mainPanel.add(dbTypeLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        dbTypeComboBox = new JComboBox<>(new String[]{"MySQL", "PostgreSQL"});
+        dbTypeComboBox.setSelectedItem(state.databaseConfig.getType().equalsIgnoreCase("postgresql") ? "PostgreSQL" : "MySQL");
+        dbTypeComboBox.addActionListener(e -> updateDefaultPort());
+        mainPanel.add(dbTypeComboBox, gbc);
+
+        row++;
+
+        // Database Host
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        JLabel dbHostLabel = new JLabel("Host:");
+        mainPanel.add(dbHostLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        dbHostField = new JTextField(state.databaseConfig.getHost());
+        mainPanel.add(dbHostField, gbc);
+
+        row++;
+
+        // Database Port
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        JLabel dbPortLabel = new JLabel("Port:");
+        mainPanel.add(dbPortLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        dbPortField = new JTextField(String.valueOf(state.databaseConfig.getPort()));
+        mainPanel.add(dbPortField, gbc);
+
+        row++;
+
+        // Database Name
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        JLabel dbDatabaseLabel = new JLabel("Database:");
+        mainPanel.add(dbDatabaseLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        dbDatabaseField = new JTextField(state.databaseConfig.getDatabase());
+        mainPanel.add(dbDatabaseField, gbc);
+
+        row++;
+
+        // Database Username
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        JLabel dbUsernameLabel = new JLabel("Username:");
+        mainPanel.add(dbUsernameLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        dbUsernameField = new JTextField(state.databaseConfig.getUsername());
+        mainPanel.add(dbUsernameField, gbc);
+
+        row++;
+
+        // Database Password
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        JLabel dbPasswordLabel = new JLabel("Password:");
+        mainPanel.add(dbPasswordLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        dbPasswordField = new JPasswordField(state.databaseConfig.getPassword());
+        mainPanel.add(dbPasswordField, gbc);
 
         row++;
 
@@ -252,14 +369,39 @@ public class SqlAgentConfigurable implements Configurable {
         }
     }
 
+    /**
+     * Update port when database type changes
+     */
+    private void updateDefaultPort() {
+        String selectedType = (String) dbTypeComboBox.getSelectedItem();
+        int defaultPort = "PostgreSQL".equals(selectedType) ? 5432 : 3306;
+        dbPortField.setText(String.valueOf(defaultPort));
+    }
+
+    /**
+     * Get database type from combo box
+     */
+    private String getTypeFromComboBox() {
+        String selectedType = (String) dbTypeComboBox.getSelectedItem();
+        return "PostgreSQL".equals(selectedType) ? "postgresql" : "mysql";
+    }
+
     @Override
     public boolean isModified() {
         State state = getState();
+        DatabaseConfig dbConfig = state.databaseConfig;
+
         return !serverUrlField.getText().trim().equals(state.serverUrl) ||
                 !timeoutField.getText().trim().equals(String.valueOf(state.timeout)) ||
                 autoStartServerCheckBox.isSelected() != state.autoStartServer ||
                 !openCodeExecutablePathField.getText().trim().equals(state.openCodeExecutablePath) ||
-                stopServerOnExitCheckBox.isSelected() != state.stopServerOnExit;
+                stopServerOnExitCheckBox.isSelected() != state.stopServerOnExit ||
+                !getTypeFromComboBox().equals(dbConfig.getType()) ||
+                !dbHostField.getText().trim().equals(dbConfig.getHost()) ||
+                !dbPortField.getText().trim().equals(String.valueOf(dbConfig.getPort())) ||
+                !dbDatabaseField.getText().trim().equals(dbConfig.getDatabase()) ||
+                !dbUsernameField.getText().trim().equals(dbConfig.getUsername()) ||
+                !String.valueOf(dbPasswordField.getPassword()).equals(dbConfig.getPassword());
     }
 
     @Override
@@ -277,6 +419,50 @@ public class SqlAgentConfigurable implements Configurable {
         state.autoStartServer = autoStartServerCheckBox.isSelected();
         state.openCodeExecutablePath = openCodeExecutablePathField.getText().trim();
         state.stopServerOnExit = stopServerOnExitCheckBox.isSelected();
+
+        // Save database configuration
+        state.databaseConfig.setType(getTypeFromComboBox());
+        state.databaseConfig.setHost(dbHostField.getText().trim());
+        try {
+            state.databaseConfig.setPort(Integer.parseInt(dbPortField.getText().trim()));
+        } catch (NumberFormatException e) {
+            throw new ConfigurationException("Invalid port value");
+        }
+        state.databaseConfig.setDatabase(dbDatabaseField.getText().trim());
+        state.databaseConfig.setUsername(dbUsernameField.getText().trim());
+        state.databaseConfig.setPassword(String.valueOf(dbPasswordField.getPassword()));
+
+        // After saving database config, start MCP server and generate OpenCode config
+        if (state.databaseConfig.isValid()) {
+            try {
+                // Start MCP server (will also update OpenCode config)
+                McpServerLifecycleService lifecycleService = McpServerLifecycleService.getInstance();
+                boolean started = lifecycleService.startMcpServer();
+
+                if (started) {
+                    // Show success notification
+                    showNotification("Database MCP Server Started",
+                            "Database tools MCP server is now running. OpenCode configuration updated at ~/.opencode/opencode.json",
+                            NotificationType.INFORMATION);
+                } else {
+                    showNotification("MCP Server Warning",
+                            "Database configuration saved, but MCP server failed to start. Check logs for details.",
+                            NotificationType.WARNING);
+                }
+            } catch (Exception e) {
+                showNotification("MCP Server Error",
+                        "Failed to start MCP server: " + e.getMessage(),
+                        NotificationType.ERROR);
+            }
+        }
+    }
+
+    /**
+     * Show notification to user
+     */
+    private void showNotification(String title, String content, NotificationType type) {
+        Notification notification = new Notification("SqlAgent", title, content, type);
+        Notifications.Bus.notify(notification);
     }
 
     @Override
@@ -287,5 +473,14 @@ public class SqlAgentConfigurable implements Configurable {
         autoStartServerCheckBox.setSelected(state.autoStartServer);
         openCodeExecutablePathField.setText(state.openCodeExecutablePath);
         stopServerOnExitCheckBox.setSelected(state.stopServerOnExit);
+
+        // Reset database configuration
+        DatabaseConfig dbConfig = state.databaseConfig;
+        dbTypeComboBox.setSelectedItem(dbConfig.getType().equalsIgnoreCase("postgresql") ? "PostgreSQL" : "MySQL");
+        dbHostField.setText(dbConfig.getHost());
+        dbPortField.setText(String.valueOf(dbConfig.getPort()));
+        dbDatabaseField.setText(dbConfig.getDatabase());
+        dbUsernameField.setText(dbConfig.getUsername());
+        dbPasswordField.setText(dbConfig.getPassword());
     }
 }

@@ -10,72 +10,52 @@ SqlAgent helps you write better, faster SQL queries by leveraging OpenCode AI to
 - **📱 MyBatis Integration** - Click gutter icons in mapper XML files for instant optimization
 - **🔍 Smart Analysis** - Automatic metadata retrieval and execution plan analysis
 - **📊 Side-by-Side Diff** - Visual comparison of original and optimized SQL
-- **🗄️ Multi-Database Support** - MySQL, PostgreSQL (extensible via MCP)
-- **📦 OpenCode Bundled** - Works out of the box, no separate installation needed!
+- **🗄️ Multi-Database Support** - MySQL, PostgreSQL
+- **📦 Zero External Dependencies** - OpenCode and MCP server bundled!
 
-## 📦 OpenCode Integration
+## 🏗️ Architecture
 
-**Great news!** This plugin includes OpenCode executable, so you don't need to install it separately.
-
-### Supported Platforms
-
-- **macOS**: Intel (x86-64) and Apple Silicon (ARM64)
-- **Linux**: x86-64
-- **Windows**: x86-64
-
-### Automatic Detection
-
-The plugin automatically detects and uses the appropriate OpenCode executable:
-
-1. Custom path (if specified in settings)
-2. **Bundled OpenCode executable** (included with plugin)
-3. System-installed OpenCode (in PATH)
-4. Common installation paths
-
-### MCP Server Configuration
-
-While the plugin bundles OpenCode, you still need to configure MCP servers for database tools.
-
-See the configuration section below for details.
+```
+┌─────────────────────┐
+│ IntelliJ IDEA       │
+│  - Plugin UI        │
+│  - Database Config  │
+│  - Java MCP Server  │
+└─────────┬───────────┘
+          │ HTTP
+          ▼
+┌─────────────────────┐
+│ OpenCode Server     │
+│  (Bundled)          │
+│  - sql-optimizer    │
+│    Skill            │
+└─────────┬───────────┘
+          │ MCP (via STDIO)
+          ▼
+┌─────────────────────┐
+│ Java MCP Server     │
+│  (Bundled)          │
+│  - Table metadata   │
+│  - Execution plans  │
+│  - SQL parsing      │
+└─────────┬───────────┘
+          │ JDBC
+          ▼
+┌─────────────────────┐
+│ Database            │
+│  (MySQL/PostgreSQL) │
+└─────────────────────┘
+```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - **IntelliJ IDEA** 2024.3+
-- **Python** 3.12+ (for MCP tools)
-- **OpenCode** is bundled with the plugin!
 
-### 1. Configure Database Tools MCP
+That's it! No Python, no external dependencies needed.
 
-Create `~/.opencode/opencode.json`:
-
-```json
-{
-  "mcpServers": {
-    "database-tools": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "/path/to/database_tools_mcp",
-        "run",
-        "python",
-        "/path/to/database_tools_mcp/main.py"
-      ],
-      "env": {
-        "DB_TYPE": "mysql",
-        "DB_HOST": "localhost",
-        "DB_PORT": "3306",
-        "DB_USER": "your_username",
-        "DB_PASSWORD": "your_password",
-        "DB_NAME": "your_database"
-      }
-    }
-  }
-}
-```
-
-### 2. Install Plugin
+### 1. Install Plugin
 
 **From Disk (Development)**
 
@@ -89,6 +69,24 @@ cd sqlagent
 **From Marketplace (Coming Soon)**
 
 Search "SqlAgent" in IDEA → Settings → Plugins → Marketplace
+
+### 2. Configure Database Connection
+
+1. Open **Settings → Tools → SQL Agent**
+2. Scroll to **Database Configuration** section
+3. Fill in your database details:
+   - **Database Type**: MySQL or PostgreSQL
+   - **Host**: e.g., localhost
+   - **Port**: 3306 (MySQL) or 5432 (PostgreSQL)
+   - **Database**: Your database name
+   - **Username**: Your database username
+   - **Password**: Your database password
+4. Click **OK** to save
+
+The plugin will automatically:
+- Extract the Java MCP server
+- Start the MCP server with your database configuration
+- Configure OpenCode to use the MCP server
 
 ### 3. Optimize Your SQL
 
@@ -118,42 +116,11 @@ Search "SqlAgent" in IDEA → Settings → Plugins → Marketplace
 # Run tests
 ./gradlew test
 
-# Build plugin
+# Build plugin (includes MCP server)
 ./gradlew buildPlugin
 
 # Run E2E tests (requires OpenCode running)
 ./gradlew test --tests E2ETest
-```
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────┐
-│ IntelliJ IDEA       │
-│  - Plugin UI        │
-│  - SQL Selection    │
-└─────────┬───────────┘
-          │ HTTP
-          ▼
-┌─────────────────────┐
-│ OpenCode Server     │
-│  - sql-optimizer    │
-│    Skill            │
-└─────────┬───────────┘
-          │ MCP
-          ▼
-┌─────────────────────┐
-│ database-tools MCP  │
-│  - Table metadata   │
-│  - Execution plans  │
-│  - SQL parsing      │
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│ Database            │
-│  (MySQL/PostgreSQL) │
-└─────────────────────┘
 ```
 
 ## 📝 License
@@ -168,7 +135,7 @@ Contributions welcome! Please see [DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.
 
 - [OpenCode](https://github.com/anthropics/opencode) - AI assistant platform
 - [IntelliJ Platform](https://plugins.jetbrains.com/docs/intellij/welcome.html) - Plugin SDK
-- [FastMCP](https://github.com/jlowin/fastmcp) - MCP server framework
+- [Model Context Protocol](https://modelcontextprotocol.io/) - Standard for LLM tool integration
 
 ## 📧 Support
 

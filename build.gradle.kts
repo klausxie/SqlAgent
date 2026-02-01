@@ -65,10 +65,27 @@ tasks {
         targetCompatibility = "17"
     }
 
+    // Copy MCP server JAR from mcp-server module to resources
+    register("copyMcpServer", Copy::class) {
+        group = "build"
+        description = "Copy MCP server JAR to plugin resources"
+
+        dependsOn(":mcp-server:shadowJar")
+
+        from(file("mcp-server/build/libs/sqlagent-mcp-server.jar"))
+        into(file("src/main/resources/mcp"))
+
+        doLast {
+            println("Copied MCP server JAR to resources")
+        }
+    }
+
     // Configure plugin.xml
     patchPluginXml {
         sinceBuild.set("241")
         untilBuild.set("241.*")
+
+        dependsOn("copyMcpServer")
     }
 
     // Set executable permission on bundled binaries (Unix only)
@@ -96,9 +113,11 @@ tasks {
     // Ensure binaries are executable before building
     named("build") {
         dependsOn("chmodBinaries")
+        dependsOn("copyMcpServer")
     }
 
     named("prepareSandbox") {
         dependsOn("chmodBinaries")
+        dependsOn("copyMcpServer")
     }
 }
