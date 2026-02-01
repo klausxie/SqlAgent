@@ -3,6 +3,7 @@ package cn.mklaus.sqlagent.mcp;
 import cn.mklaus.sqlagent.mcp.config.DatabaseConfig;
 import cn.mklaus.sqlagent.mcp.tools.*;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonNull;
 import org.slf4j.Logger;
@@ -110,6 +111,7 @@ public class DatabaseMcpServer {
 
     /**
      * Handle initialize request
+     * MCP spec: https://spec.modelcontextprotocol.io/specification/server/
      */
     private JsonObject handleInitialize(JsonObject request) {
         JsonObject response = new JsonObject();
@@ -117,18 +119,15 @@ public class DatabaseMcpServer {
         response.add("id", request.get("id"));
 
         JsonObject result = new JsonObject();
-        result.addProperty("name", "sqlagent-database-tools");
-        result.addProperty("version", "1.0.0");
         result.addProperty("protocolVersion", "2024-11-05");
 
         JsonObject serverInfo = new JsonObject();
-        serverInfo.addProperty("name", "SqlAgent Database Tools");
+        serverInfo.addProperty("name", "sqlagent-database-tools");
         serverInfo.addProperty("version", "1.0.0");
         result.add("serverInfo", serverInfo);
 
         JsonObject capabilities = new JsonObject();
-        JsonObject tools = new JsonObject();
-        capabilities.add("tools", tools);
+        capabilities.add("tools", new JsonObject());
         result.add("capabilities", capabilities);
 
         response.add("result", result);
@@ -137,6 +136,7 @@ public class DatabaseMcpServer {
 
     /**
      * Handle tools/list request
+     * Returns an array of tool descriptions
      */
     private JsonObject handleListTools(JsonObject request) {
         JsonObject response = new JsonObject();
@@ -144,7 +144,7 @@ public class DatabaseMcpServer {
         response.add("id", request.get("id"));
 
         JsonObject result = new JsonObject();
-        result.add("tools", GSON.toJsonTree(getToolDescriptions()));
+        result.add("tools", GSON.toJsonTree(getToolDescriptionsAsList()));
 
         response.add("result", result);
         return response;
@@ -152,6 +152,7 @@ public class DatabaseMcpServer {
 
     /**
      * Handle tools/call request
+     * MCP spec: response must contain content array
      */
     private JsonObject handleToolCall(JsonObject request) {
         JsonObject params = request.getAsJsonObject("params");
@@ -164,7 +165,24 @@ public class DatabaseMcpServer {
         }
 
         try {
-            JsonObject result = tool.execute(arguments);
+            JsonObject toolResult = tool.execute(arguments);
+
+            // Wrap result in MCP content format
+            JsonObject result = new JsonObject();
+
+            // Format tool result as JSON string
+            String resultText = GSON.toJson(toolResult);
+
+            JsonObject contentItem = new JsonObject();
+            contentItem.addProperty("type", "text");
+            contentItem.addProperty("text", resultText);
+
+            JsonArray contentArray = new JsonArray();
+            contentArray.add(contentItem);
+
+            result.add("content", contentArray);
+            result.addProperty("isError", false);
+
             return sendSuccess(request.get("id"), result);
         } catch (Exception e) {
             logger.error("Tool execution error: {}", toolName, e);
@@ -181,17 +199,17 @@ public class DatabaseMcpServer {
     }
 
     /**
-     * Get descriptions of all available tools
+     * Get descriptions of all available tools as a list
      */
-    private Map<String, JsonObject> getToolDescriptions() {
-        Map<String, JsonObject> descriptions = new HashMap<>();
+    private List<JsonObject> getToolDescriptionsAsList() {
+        List<JsonObject> descriptions = new ArrayList<>();
 
         for (Map.Entry<String, McpTool> entry : tools.entrySet()) {
             JsonObject desc = new JsonObject();
             desc.addProperty("name", entry.getKey());
             desc.addProperty("description", entry.getValue().getDescription());
             desc.add("inputSchema", GSON.toJsonTree(entry.getValue().getInputSchema()));
-            descriptions.put(entry.getKey(), desc);
+            descriptions.add(desc);
         }
 
         return descriptions;
