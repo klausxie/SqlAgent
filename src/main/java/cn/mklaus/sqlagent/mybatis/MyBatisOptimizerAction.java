@@ -1,5 +1,7 @@
 package cn.mklaus.sqlagent.mybatis;
 
+import cn.mklaus.sqlagent.config.SqlAgentConfigurable;
+import cn.mklaus.sqlagent.config.SqlAgentSettingsService;
 import cn.mklaus.sqlagent.model.OptimizationResponse;
 import cn.mklaus.sqlagent.service.SqlOptimizerService;
 import cn.mklaus.sqlagent.ui.DiffViewer;
@@ -96,7 +98,12 @@ public class MyBatisOptimizerAction extends AnAction {
                         panel.log("Starting optimization for: " + statementId);
                     }
 
-                    SqlOptimizerService optimizer = new SqlOptimizerService(OPENCODE_SERVER_URL);
+                    // Get settings
+                    SqlAgentConfigurable.State state = SqlAgentSettingsService.getInstance().getState();
+
+                    SqlOptimizerService optimizer = new SqlOptimizerService(
+                            state.serverUrl != null ? state.serverUrl : OPENCODE_SERVER_URL,
+                            state);
 
                     updateProgress(indicator, panel, "Optimizing with AI...", 0.5, 50);
 

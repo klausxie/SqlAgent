@@ -1,5 +1,7 @@
 package cn.mklaus.sqlagent.ui;
 
+import cn.mklaus.sqlagent.config.SqlAgentConfigurable;
+import cn.mklaus.sqlagent.config.SqlAgentSettingsService;
 import cn.mklaus.sqlagent.model.*;
 import cn.mklaus.sqlagent.service.SqlOptimizerService;
 import com.intellij.notification.Notification;
@@ -68,7 +70,12 @@ public class OptimizeSqlAction extends AnAction {
                     panel = getToolWindowPanel(project);
                     initializePanel(panel);
 
-                    SqlOptimizerService optimizer = new SqlOptimizerService(OPENCODE_SERVER_URL);
+                    // Get settings
+                    SqlAgentConfigurable.State state = SqlAgentSettingsService.getInstance().getState();
+
+                    SqlOptimizerService optimizer = new SqlOptimizerService(
+                            state.serverUrl != null ? state.serverUrl : OPENCODE_SERVER_URL,
+                            state);
 
                     updateProgress(indicator, panel, "Optimizing with AI...", 0.3, 30);
                     panel.log("Starting optimization...");

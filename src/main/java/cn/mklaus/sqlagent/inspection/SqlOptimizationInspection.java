@@ -1,10 +1,13 @@
 package cn.mklaus.sqlagent.inspection;
 
+import cn.mklaus.sqlagent.config.SqlAgentConfigurable;
+import cn.mklaus.sqlagent.config.SqlAgentSettingsService;
 import cn.mklaus.sqlagent.service.SqlOptimizerService;
 import com.intellij.codeInspection.*;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationType;
 import com.intellij.notification.Notifications;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
@@ -196,7 +199,12 @@ public class SqlOptimizationInspection extends LocalInspectionTool {
                 @Override
                 public void run(@NotNull com.intellij.openapi.progress.ProgressIndicator indicator) {
                     try {
-                        SqlOptimizerService optimizer = new SqlOptimizerService(OPENCODE_SERVER_URL);
+                        // Get settings
+                        SqlAgentConfigurable.State state = SqlAgentSettingsService.getInstance().getState();
+
+                        SqlOptimizerService optimizer = new SqlOptimizerService(
+                                state.serverUrl != null ? state.serverUrl : OPENCODE_SERVER_URL,
+                                state);
                         cn.mklaus.sqlagent.model.OptimizationResponse response = optimizer.optimize(originalSql);
 
                         if (response.hasError()) {

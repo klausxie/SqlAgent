@@ -1,5 +1,6 @@
 package cn.mklaus.sqlagent.service;
 
+import cn.mklaus.sqlagent.config.SqlAgentConfigurable;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -17,7 +18,10 @@ public class SqlOptimizerServiceTest {
 
     @Before
     public void setUp() {
-        optimizer = new SqlOptimizerService("http://localhost:4096");
+        SqlAgentConfigurable.State state = new SqlAgentConfigurable.State();
+        state.serverUrl = "http://localhost:4096";
+        state.autoStartServer = false; // Don't auto-start in tests
+        optimizer = new SqlOptimizerService(state.serverUrl, state);
     }
 
     @Test
@@ -27,8 +31,16 @@ public class SqlOptimizerServiceTest {
 
     @Test
     public void testServiceWithDifferentUrl() {
-        SqlOptimizerService service1 = new SqlOptimizerService("http://localhost:4096");
-        SqlOptimizerService service2 = new SqlOptimizerService("http://example.com:8080");
+        SqlAgentConfigurable.State state1 = new SqlAgentConfigurable.State();
+        state1.serverUrl = "http://localhost:4096";
+        state1.autoStartServer = false;
+
+        SqlAgentConfigurable.State state2 = new SqlAgentConfigurable.State();
+        state2.serverUrl = "http://example.com:8080";
+        state2.autoStartServer = false;
+
+        SqlOptimizerService service1 = new SqlOptimizerService(state1.serverUrl, state1);
+        SqlOptimizerService service2 = new SqlOptimizerService(state2.serverUrl, state2);
 
         assertNotNull("Service with custom URL should be created", service1);
         assertNotNull("Service with different URL should be created", service2);

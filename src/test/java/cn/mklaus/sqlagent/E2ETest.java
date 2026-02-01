@@ -1,5 +1,6 @@
 package cn.mklaus.sqlagent;
 
+import cn.mklaus.sqlagent.config.SqlAgentConfigurable;
 import cn.mklaus.sqlagent.model.OptimizationRequest;
 import cn.mklaus.sqlagent.model.OptimizationResponse;
 import cn.mklaus.sqlagent.opencode.ConnectionTester;
@@ -30,7 +31,10 @@ public class E2ETest extends BasePlatformTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        optimizer = new SqlOptimizerService(OPENCODE_SERVER_URL);
+        SqlAgentConfigurable.State state = new SqlAgentConfigurable.State();
+        state.serverUrl = OPENCODE_SERVER_URL;
+        state.autoStartServer = false; // Don't auto-start in tests
+        optimizer = new SqlOptimizerService(OPENCODE_SERVER_URL, state);
     }
 
     @Override
@@ -119,7 +123,11 @@ public class E2ETest extends BasePlatformTestCase {
      */
     @Test
     public void test03_InvalidServerUrl() {
-        SqlOptimizerService invalidOptimizer = new SqlOptimizerService("http://localhost:9999");
+        SqlAgentConfigurable.State invalidState = new SqlAgentConfigurable.State();
+        invalidState.serverUrl = "http://localhost:9999";
+        invalidState.autoStartServer = false;
+
+        SqlOptimizerService invalidOptimizer = new SqlOptimizerService(invalidState.serverUrl, invalidState);
 
         try {
             OptimizationResponse response = invalidOptimizer.optimize(TEST_SQL);
