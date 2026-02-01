@@ -42,18 +42,18 @@ public class OpenCodeConfigGenerator {
                 Files.createDirectories(configPath.getParent());
             }
 
-            // Add or update MCP servers configuration
-            JsonObject mcpServers;
-            if (config.has("mcpServers")) {
-                mcpServers = config.getAsJsonObject("mcpServers");
+            // Add or update MCP configuration (OpenCode uses 'mcp' key)
+            JsonObject mcpConfig;
+            if (config.has("mcp")) {
+                mcpConfig = config.getAsJsonObject("mcp");
             } else {
-                mcpServers = new JsonObject();
-                config.add("mcpServers", mcpServers);
+                mcpConfig = new JsonObject();
+                config.add("mcp", mcpConfig);
             }
 
             // Add database-tools MCP server
             JsonObject dbToolsMcp = createMcpServerConfig(dbConfig, mcpServerJarPath);
-            mcpServers.add(MCP_SERVER_NAME, dbToolsMcp);
+            mcpConfig.add(MCP_SERVER_NAME, dbToolsMcp);
 
             // Write config
             String json = gson.toJson(config);
@@ -70,21 +70,24 @@ public class OpenCodeConfigGenerator {
     }
 
     /**
-     * Create MCP server configuration JSON
+     * Create MCP server configuration JSON (OpenCode format)
      */
     private JsonObject createMcpServerConfig(DatabaseConfig dbConfig, String mcpServerJarPath) {
         JsonObject config = new JsonObject();
 
-        // Command to run Java MCP server
+        // Type: local MCP server
+        config.addProperty("type", "local");
+
+        // Command: array format ["java", "-jar", "<jar-path>"]
         String javaHome = System.getProperty("java.home");
         String osName = System.getProperty("os.name").toLowerCase();
         String javaBin = osName.contains("win") ? "java.exe" : "java";
         String javaExec = Paths.get(javaHome, "bin", javaBin).toString();
 
-        config.addProperty("command", javaExec);
+        config.add("command", gson.toJsonTree(new String[]{javaExec, "-jar", mcpServerJarPath}));
 
-        // Arguments: -jar, <mcp-server-jar>
-        config.add("args", gson.toJsonTree(new String[]{"-jar", mcpServerJarPath}));
+        // Enabled
+        config.addProperty("enabled", true);
 
         // Environment variables for database connection
         JsonObject env = new JsonObject();
@@ -94,7 +97,7 @@ public class OpenCodeConfigGenerator {
         env.addProperty("DB_NAME", dbConfig.getDatabase());
         env.addProperty("DB_USER", dbConfig.getUsername());
         env.addProperty("DB_PASSWORD", dbConfig.getPassword());
-        config.add("env", env);
+        config.add("environment", env);
 
         return config;
     }

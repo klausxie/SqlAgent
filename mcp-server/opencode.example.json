@@ -6,33 +6,16 @@
       "command": [
         "java",
         "-jar",
-        "/Users/klaus/work/SqlAgent/mcp-server/build/libs/sqlagent-mcp-server.jar"
+        "/path/to/sqlagent-mcp-server.jar"
       ],
       "enabled": true,
       "environment": {
         "DB_TYPE": "mysql",
-        "DB_HOST": "rm-wz9y7za9k27oe4o8beo.mysql.rds.aliyuncs.com",
+        "DB_HOST": "your-database-host",
         "DB_PORT": "3306",
-        "DB_USER": "klaus",
-        "DB_PASSWORD": "Aa28012801",
-        "DB_NAME": "luo"
-      }
-    }
-  },
-  "mcpServers": {
-    "database-tools": {
-      "command": "/Users/klaus/.gradle/caches/8.13/transforms/1778fd2a03537c4e9ec381132aad9cfa/transformed/ideaIC-2024.1.7-aarch64/jbr/Contents/Home/bin/java",
-      "args": [
-        "-jar",
-        "/var/folders/lf/zbz9nlp56msdnw32sx0xqmg40000gn/T//sqlagent/mcp/sqlagent-mcp-server.jar"
-      ],
-      "env": {
-        "DB_TYPE": "mysql",
-        "DB_HOST": "rm-wz9y7za9k27oe4o8beo.mysql.rds.aliyuncs.com",
-        "DB_PORT": "3306",
-        "DB_NAME": "luo",
-        "DB_USER": "klaus",
-        "DB_PASSWORD": "Aa28012801"
+        "DB_USER": "your-username",
+        "DB_PASSWORD": "your-password",
+        "DB_NAME": "your-database"
       }
     }
   }
