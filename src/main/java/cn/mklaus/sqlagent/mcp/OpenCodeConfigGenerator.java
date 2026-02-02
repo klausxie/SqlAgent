@@ -1,6 +1,7 @@
 package cn.mklaus.sqlagent.mcp;
 
 import cn.mklaus.sqlagent.config.DatabaseConfig;
+import cn.mklaus.sqlagent.config.LlmProviderConfig;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
@@ -25,10 +26,10 @@ public class OpenCodeConfigGenerator {
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     /**
-     * Update OpenCode configuration to include MCP server
+     * Update OpenCode configuration to include MCP server and LLM provider
      * @return true if successful
      */
-    public boolean updateConfig(DatabaseConfig dbConfig, String mcpServerJarPath) {
+    public boolean updateConfig(DatabaseConfig dbConfig, LlmProviderConfig llmConfig, String mcpServerJarPath) {
         try {
             Path configPath = getConfigPath();
 
@@ -41,6 +42,14 @@ public class OpenCodeConfigGenerator {
                 config = new JsonObject();
                 Files.createDirectories(configPath.getParent());
             }
+
+            // Add $schema if not present
+            if (!config.has("$schema")) {
+                config.addProperty("$schema", "https://opencode.ai/config.json");
+            }
+
+            // Add or update LLM provider configuration
+            addProviderConfig(config, llmConfig);
 
             // Add or update MCP configuration (OpenCode uses 'mcp' key)
             JsonObject mcpConfig;
@@ -66,6 +75,39 @@ public class OpenCodeConfigGenerator {
         } catch (Exception e) {
             LOG.error("Failed to update OpenCode configuration", e);
             return false;
+        }
+    }
+
+    /**
+     * Add LLM provider configuration to OpenCode config
+     */
+    private void addProviderConfig(JsonObject config, LlmProviderConfig llmConfig) {
+        // Only add provider section if API key is configured
+        if (llmConfig == null || !llmConfig.isValid()) {
+            return;
+        }
+
+        JsonObject provider = new JsonObject();
+        JsonObject providerSpecific = new JsonObject();
+        JsonObject options = new JsonObject();
+
+        // Add API key
+        options.addProperty("apiKey", llmConfig.getApiKey());
+
+        // Add base URL if custom (not default)
+        String baseUrl = llmConfig.getBaseUrl();
+        if (baseUrl != null && !baseUrl.isEmpty()) {
+            options.addProperty("baseURL", baseUrl);
+        }
+
+        providerSpecific.add("options", options);
+        provider.add(llmConfig.getProviderType(), providerSpecific);
+        config.add("provider", provider);
+
+        // Add model configuration if specified
+        String model = llmConfig.getModel();
+        if (model != null && !model.isEmpty()) {
+            config.addProperty("model", model);
         }
     }
 

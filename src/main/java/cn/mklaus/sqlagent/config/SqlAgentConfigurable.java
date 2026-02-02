@@ -42,6 +42,13 @@ public class SqlAgentConfigurable implements Configurable {
     private JTextField dbUsernameField;
     private JPasswordField dbPasswordField;
 
+    // LLM Provider configuration fields
+    private JComboBox<String> llmProviderComboBox;
+    private JPasswordField llmApiKeyField;
+    private JTextField llmBaseUrlField;
+    private JTextField llmModelField;
+    private JLabel llmSecurityWarningLabel;
+
     public static class State {
         public String serverUrl = "http://localhost:4096";
         public int timeout = 300;
@@ -51,6 +58,9 @@ public class SqlAgentConfigurable implements Configurable {
 
         // Database configuration for MCP server
         public DatabaseConfig databaseConfig = new DatabaseConfig();
+
+        // LLM Provider configuration for OpenCode
+        public LlmProviderConfig llmProviderConfig = new LlmProviderConfig();
     }
 
     private State getState() {
@@ -267,6 +277,102 @@ public class SqlAgentConfigurable implements Configurable {
         testConnectionButton.addActionListener(e -> testConnection());
         mainPanel.add(testConnectionButton, gbc);
 
+        row++;
+
+        // Separator for LLM Provider Configuration
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        mainPanel.add(new JSeparator(), gbc);
+
+        row++;
+
+        // LLM Provider Configuration Section Label
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 2;
+        JLabel llmSectionLabel = new JLabel("<html><b>LLM Provider Configuration (for OpenCode)</b></html>");
+        mainPanel.add(llmSectionLabel, gbc);
+
+        row++;
+
+        // LLM Provider Type
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
+        JLabel llmProviderLabel = new JLabel("Provider:");
+        mainPanel.add(llmProviderLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        llmProviderComboBox = new JComboBox<>(new String[]{"Anthropic", "OpenAI", "Google Gemini"});
+        llmProviderComboBox.setSelectedItem(state.llmProviderConfig.getProviderDisplayName());
+        llmProviderComboBox.addActionListener(e -> updateLlmPlaceholderUrl());
+        llmProviderComboBox.setToolTipText("Select the LLM provider for AI-powered SQL optimization");
+        mainPanel.add(llmProviderComboBox, gbc);
+
+        row++;
+
+        // LLM API Key
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        JLabel llmApiKeyLabel = new JLabel("API Key:");
+        mainPanel.add(llmApiKeyLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        llmApiKeyField = new JPasswordField(state.llmProviderConfig.getApiKey());
+        llmApiKeyField.setToolTipText("Enter your API key for the selected provider");
+        mainPanel.add(llmApiKeyField, gbc);
+
+        row++;
+
+        // LLM Base URL (Optional)
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        JLabel llmBaseUrlLabel = new JLabel("Base URL (Optional):");
+        mainPanel.add(llmBaseUrlLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        // Display the saved value, or show default as placeholder
+        String savedBaseUrl = state.llmProviderConfig.getBaseUrl();
+        llmBaseUrlField = new JTextField(savedBaseUrl);
+        llmBaseUrlField.setToolTipText("Custom API endpoint (leave empty to use default)");
+        mainPanel.add(llmBaseUrlField, gbc);
+
+        row++;
+
+        // LLM Model (Optional)
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        JLabel llmModelLabel = new JLabel("Model (Optional):");
+        mainPanel.add(llmModelLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        // Display the saved value, or show default as placeholder
+        String savedModel = state.llmProviderConfig.getModel();
+        llmModelField = new JTextField(savedModel);
+        llmModelField.setToolTipText("Custom model (e.g., anthropic/claude-sonnet-4-5, openai/gpt-4o). Leave empty to use provider default.");
+        mainPanel.add(llmModelField, gbc);
+
+        row++;
+
+        // Security Warning
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        llmSecurityWarningLabel = new JLabel("<html><div style='color:#E65100;'>⚠️ Security Notice: API keys will be stored in plain text in ~/.opencode/opencode.json</div></html>");
+        llmSecurityWarningLabel.setToolTipText("Ensure your system is secure and don't share configuration files");
+        mainPanel.add(llmSecurityWarningLabel, gbc);
+
         return mainPanel;
     }
 
@@ -379,6 +485,55 @@ public class SqlAgentConfigurable implements Configurable {
     }
 
     /**
+     * Update LLM base URL and model placeholders when provider changes
+     */
+    private void updateLlmPlaceholderUrl() {
+        String selectedProvider = (String) llmProviderComboBox.getSelectedItem();
+        String providerType = LlmProviderConfig.getProviderTypeFromDisplayName(selectedProvider);
+        String defaultUrl = LlmProviderConfig.getDefaultBaseUrl(providerType);
+        String defaultModel = LlmProviderConfig.getDefaultModel(providerType);
+
+        // Only update URL if the field is empty
+        String currentUrl = llmBaseUrlField.getText().trim();
+        if (currentUrl.isEmpty()) {
+            llmBaseUrlField.setText(defaultUrl);
+        }
+
+        // Only update model if the field is empty
+        String currentModel = llmModelField.getText().trim();
+        if (currentModel.isEmpty()) {
+            llmModelField.setText(defaultModel);
+        }
+    }
+
+    /**
+     * Check if the model is a default model
+     */
+    private boolean isDefaultModel(String model) {
+        return model.equals("anthropic/claude-sonnet-4-5") ||
+               model.equals("openai/gpt-4o") ||
+               model.equals("gemini/gemini-2.5-flash");
+    }
+
+    /**
+     * Check if the URL is a default URL
+     */
+    private boolean isDefaultUrl(String url) {
+        return url.equals("https://api.anthropic.com") ||
+               url.equals("https://api.openai.com/v1") ||
+               url.equals("https://generativelanguage.googleapis.com/v1beta");
+    }
+
+    /**
+     * Get LLM provider type from combo box
+     */
+    private String getLlmProviderType() {
+        return LlmProviderConfig.getProviderTypeFromDisplayName(
+            (String) llmProviderComboBox.getSelectedItem()
+        );
+    }
+
+    /**
      * Get database type from combo box
      */
     private String getTypeFromComboBox() {
@@ -390,6 +545,7 @@ public class SqlAgentConfigurable implements Configurable {
     public boolean isModified() {
         State state = getState();
         DatabaseConfig dbConfig = state.databaseConfig;
+        LlmProviderConfig llmConfig = state.llmProviderConfig;
 
         return !serverUrlField.getText().trim().equals(state.serverUrl) ||
                 !timeoutField.getText().trim().equals(String.valueOf(state.timeout)) ||
@@ -401,7 +557,11 @@ public class SqlAgentConfigurable implements Configurable {
                 !dbPortField.getText().trim().equals(String.valueOf(dbConfig.getPort())) ||
                 !dbDatabaseField.getText().trim().equals(dbConfig.getDatabase()) ||
                 !dbUsernameField.getText().trim().equals(dbConfig.getUsername()) ||
-                !String.valueOf(dbPasswordField.getPassword()).equals(dbConfig.getPassword());
+                !String.valueOf(dbPasswordField.getPassword()).equals(dbConfig.getPassword()) ||
+                !getLlmProviderType().equals(llmConfig.getProviderType()) ||
+                !String.valueOf(llmApiKeyField.getPassword()).equals(llmConfig.getApiKey()) ||
+                !llmBaseUrlField.getText().trim().equals(llmConfig.getBaseUrl()) ||
+                !llmModelField.getText().trim().equals(llmConfig.getModel());
     }
 
     @Override
@@ -432,8 +592,18 @@ public class SqlAgentConfigurable implements Configurable {
         state.databaseConfig.setUsername(dbUsernameField.getText().trim());
         state.databaseConfig.setPassword(String.valueOf(dbPasswordField.getPassword()));
 
-        // After saving database config, start MCP server and generate OpenCode config
-        if (state.databaseConfig.isValid()) {
+        // Save LLM provider configuration
+        state.llmProviderConfig.setProviderType(getLlmProviderType());
+        state.llmProviderConfig.setApiKey(String.valueOf(llmApiKeyField.getPassword()));
+
+        // Save base URL (if empty, will use provider default)
+        state.llmProviderConfig.setBaseUrl(llmBaseUrlField.getText().trim());
+
+        // Save model (if empty, will use provider default)
+        state.llmProviderConfig.setModel(llmModelField.getText().trim());
+
+        // After saving configurations, update OpenCode config
+        if (state.databaseConfig.isValid() || state.llmProviderConfig.isValid()) {
             try {
                 // Start MCP server (will also update OpenCode config)
                 McpServerLifecycleService lifecycleService = McpServerLifecycleService.getInstance();
@@ -441,12 +611,12 @@ public class SqlAgentConfigurable implements Configurable {
 
                 if (started) {
                     // Show success notification
-                    showNotification("Database MCP Server Started",
-                            "Database tools MCP server is now running. OpenCode configuration updated at ~/.opencode/opencode.json",
+                    showNotification("Configuration Saved",
+                            "MCP server started and OpenCode configuration updated at ~/.opencode/opencode.json",
                             NotificationType.INFORMATION);
                 } else {
-                    showNotification("MCP Server Warning",
-                            "Database configuration saved, but MCP server failed to start. Check logs for details.",
+                    showNotification("Configuration Warning",
+                            "Settings saved, but MCP server failed to start. Check logs for details.",
                             NotificationType.WARNING);
                 }
             } catch (Exception e) {
@@ -482,5 +652,12 @@ public class SqlAgentConfigurable implements Configurable {
         dbDatabaseField.setText(dbConfig.getDatabase());
         dbUsernameField.setText(dbConfig.getUsername());
         dbPasswordField.setText(dbConfig.getPassword());
+
+        // Reset LLM provider configuration
+        LlmProviderConfig llmConfig = state.llmProviderConfig;
+        llmProviderComboBox.setSelectedItem(llmConfig.getProviderDisplayName());
+        llmApiKeyField.setText(llmConfig.getApiKey());
+        llmBaseUrlField.setText(llmConfig.getBaseUrl());
+        llmModelField.setText(llmConfig.getModel());
     }
 }

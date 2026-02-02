@@ -1,6 +1,7 @@
 package cn.mklaus.sqlagent.mcp;
 
 import cn.mklaus.sqlagent.config.DatabaseConfig;
+import cn.mklaus.sqlagent.config.LlmProviderConfig;
 import cn.mklaus.sqlagent.config.SqlAgentSettingsService;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.Application;
@@ -39,10 +40,18 @@ public final class McpServerLifecycleService implements Disposable {
             return true;
         }
 
-        DatabaseConfig dbConfig = SqlAgentSettingsService.getInstance().getState().databaseConfig;
+        var state = SqlAgentSettingsService.getInstance().getState();
+        DatabaseConfig dbConfig = state.databaseConfig;
+        LlmProviderConfig llmConfig = state.llmProviderConfig;
 
+        // Update OpenCode configuration even if database config is not valid
+        // (LLM provider config alone is useful)
         if (!dbConfig.isValid()) {
             LOG.warn("Database configuration is not valid, not starting MCP server");
+            // Still update OpenCode config for LLM provider
+            String jarPath = System.getProperty("java.io.tmpdir") + "/sqlagent/mcp/sqlagent-mcp-server.jar";
+            LOG.info("Updating OpenCode configuration with LLM provider config");
+            configGenerator.updateConfig(dbConfig, llmConfig, jarPath);
             return false;
         }
 
@@ -50,10 +59,10 @@ public final class McpServerLifecycleService implements Disposable {
         isRunning = mcpServerManager.startServer(dbConfig);
 
         if (isRunning) {
-            // Update OpenCode configuration with the extracted JAR path
+            // Update OpenCode configuration with the extracted JAR path and LLM provider config
             String jarPath = System.getProperty("java.io.tmpdir") + "/sqlagent/mcp/sqlagent-mcp-server.jar";
             LOG.info("Updating OpenCode configuration with MCP server JAR: " + jarPath);
-            configGenerator.updateConfig(dbConfig, jarPath);
+            configGenerator.updateConfig(dbConfig, llmConfig, jarPath);
         }
 
         return isRunning;
