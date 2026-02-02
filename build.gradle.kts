@@ -16,7 +16,7 @@ repositories {
 dependencies {
     // IntelliJ Platform - Target 2024.1
     intellijPlatform {
-        create("IC", "2024.1.7")
+        create("IC", "2024.3.2")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
         instrumentationTools()
 
@@ -53,7 +53,7 @@ intellijPlatform {
     pluginConfiguration {
         ideaVersion {
             sinceBuild = "241"
-            untilBuild = "241.*"
+            untilBuild = "243.*"
         }
     }
 }
@@ -83,7 +83,7 @@ tasks {
     // Configure plugin.xml
     patchPluginXml {
         sinceBuild.set("241")
-        untilBuild.set("241.*")
+        untilBuild.set("243.*")
 
         dependsOn("copyMcpServer")
     }
