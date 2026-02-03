@@ -21,7 +21,6 @@ public class OptimizationPanel {
     private JBTextArea logArea;
     private JBList<SuggestionItem> suggestionList;
     private DefaultListModel<SuggestionItem> suggestionModel;
-    private JPanel metadataPanel;
     private JLabel statusLabel;
     private JProgressBar progressBar;
     private JButton applyButton;
@@ -55,11 +54,7 @@ public class OptimizationPanel {
 
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
-        // Center panel: Split log and metadata
-        JSplitPane centerSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-        centerSplit.setResizeWeight(0.6);
-
-        // Log area
+        // Center panel: Log area
         logArea = new JBTextArea();
         logArea.setEditable(false);
         logArea.setBackground(UIUtil.getPanelBackground());
@@ -67,15 +62,7 @@ public class OptimizationPanel {
 
         JBScrollPane logScroll = new JBScrollPane(logArea);
         logScroll.setBorder(BorderFactory.createTitledBorder("Optimization Log"));
-        centerSplit.setTopComponent(logScroll);
-
-        // Metadata panel
-        metadataPanel = new JPanel(new GridLayout(0, 1));
-        metadataPanel.setBorder(BorderFactory.createTitledBorder("Table Metadata"));
-        JScrollPane metadataScroll = new JScrollPane(metadataPanel);
-        centerSplit.setBottomComponent(metadataScroll);
-
-        mainPanel.add(centerSplit, BorderLayout.CENTER);
+        mainPanel.add(logScroll, BorderLayout.CENTER);
 
         // Bottom panel: Suggestions list and Apply button
         JPanel bottomPanel = new JPanel(new BorderLayout(5, 5));
@@ -149,7 +136,6 @@ public class OptimizationPanel {
         runOnEdt(() -> {
             logArea.setText("");
             suggestionModel.clear();
-            clearMetadata();
         });
     }
 
@@ -168,27 +154,6 @@ public class OptimizationPanel {
         runOnEdt(() -> {
             progressBar.setIndeterminate(false);
             progressBar.setValue(progress);
-        });
-    }
-
-    public void addMetadata(String key, String value) {
-        runOnEdt(() -> {
-            JPanel panel = new JPanel(new BorderLayout(5, 0));
-            JLabel keyLabel = new JLabel(key + ":");
-            keyLabel.setFont(keyLabel.getFont().deriveFont(Font.BOLD));
-            JLabel valueLabel = new JLabel(value);
-            panel.add(keyLabel, BorderLayout.WEST);
-            panel.add(valueLabel, BorderLayout.CENTER);
-            metadataPanel.add(panel);
-            metadataPanel.revalidate();
-        });
-    }
-
-    public void clearMetadata() {
-        runOnEdt(() -> {
-            metadataPanel.removeAll();
-            metadataPanel.revalidate();
-            metadataPanel.repaint();
         });
     }
 

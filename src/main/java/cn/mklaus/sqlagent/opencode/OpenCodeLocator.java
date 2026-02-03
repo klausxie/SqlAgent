@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -262,6 +263,31 @@ public class OpenCodeLocator {
     }
 
     /**
+     * Create ProcessBuilder with platform-specific command
+     * On Windows, use "cmd /c" to execute batch files
+     */
+    private ProcessBuilder createProcessBuilder(File executable, String... args) {
+        String osName = System.getProperty("os.name").toLowerCase();
+        String executablePath = executable.getAbsolutePath();
+
+        if (osName.contains("win") && (executablePath.endsWith(".bat") || executablePath.endsWith(".cmd"))) {
+            // Windows batch file: use cmd /c
+            List<String> command = new ArrayList<>();
+            command.add("cmd");
+            command.add("/c");
+            command.add(executablePath);
+            command.addAll(Arrays.asList(args));
+            return new ProcessBuilder(command);
+        } else {
+            // Direct execution (Linux/macOS or .exe on Windows)
+            List<String> command = new ArrayList<>();
+            command.add(executablePath);
+            command.addAll(Arrays.asList(args));
+            return new ProcessBuilder(command);
+        }
+    }
+
+    /**
      * Get OpenCode version
      * @return version string if successful, null otherwise
      */
@@ -272,7 +298,7 @@ public class OpenCodeLocator {
         }
 
         try {
-            ProcessBuilder pb = new ProcessBuilder(executable.getAbsolutePath(), "--version");
+            ProcessBuilder pb = createProcessBuilder(executable, "--version");
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
