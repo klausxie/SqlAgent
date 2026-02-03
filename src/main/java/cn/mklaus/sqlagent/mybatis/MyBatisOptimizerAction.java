@@ -143,7 +143,10 @@ public class MyBatisOptimizerAction extends AnAction {
                         return;
                     }
 
-                    DiffViewer.showDiffInEditor(project, originalSql, response.getOptimizedSql(), response);
+                    PsiFile psiFile = xmlTag.getContainingFile();
+                    TextRange sqlRange = findSqlTextRange(xmlTag);
+                    DiffViewer.showFileDiffWithReplacement(project, psiFile, sqlRange,
+                                                           originalSql, response.getOptimizedSql(), response);
 
                     if (panel != null) {
                         panel.setOptimizationResult(originalSql,

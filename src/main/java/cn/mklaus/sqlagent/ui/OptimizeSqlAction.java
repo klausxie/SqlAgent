@@ -165,7 +165,7 @@ public class OptimizeSqlAction extends AnAction {
                     });
                 }
 
-                DiffViewer.showDiffInEditor(project, originalSql, optimizedSql, response);
+                DiffViewer.showFileDiffWithReplacement(project, editor, originalSql, optimizedSql, response);
             }
 
             private void applyOptimizedSql(Project project, Editor editor,
