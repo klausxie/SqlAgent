@@ -29,6 +29,13 @@ public class McpServerManager {
      */
     public boolean startServer(DatabaseConfig config) {
         try {
+            // Validate config
+            if (config == null || !config.isValid()) {
+                LOG.error("Invalid database configuration. Please configure database connection first.");
+                LOG.error("Go to: Settings → Tools → SQL Agent → Database Configuration");
+                return false;
+            }
+
             // Extract JAR from plugin resources
             Path jarPath = extractMcpServerJar();
             if (jarPath == null) {
@@ -51,16 +58,20 @@ public class McpServerManager {
             );
 
             // Set environment variables for database connection
-            pb.environment().put("DB_TYPE", config.getType());
-            pb.environment().put("DB_HOST", config.getHost());
-            pb.environment().put("DB_PORT", String.valueOf(config.getPort()));
-            pb.environment().put("DB_NAME", config.getDatabase());
-            pb.environment().put("DB_USER", config.getUsername());
-            pb.environment().put("DB_PASSWORD", config.getPassword());
+            Map<String, String> env = pb.environment();
+            env.put("DB_TYPE", config.getType());
+            env.put("DB_HOST", config.getHost());
+            env.put("DB_PORT", String.valueOf(config.getPort()));
+            env.put("DB_NAME", config.getDatabase());
+            env.put("DB_USER", config.getUsername());
+            env.put("DB_PASSWORD", config.getPassword());
 
             pb.redirectErrorStream(true);
 
-            LOG.info("Starting MCP server: " + javaExec + " -jar " + jarPath);
+            LOG.info("Starting MCP server with database: " + config.getType() + "://" + config.getHost() + ":" + config.getPort() + "/" + config.getDatabase());
+            LOG.info("Java: " + javaExec);
+            LOG.info("JAR: " + jarPath);
+
             mcpServerProcess = pb.start();
 
             // Start output logger
@@ -75,6 +86,7 @@ public class McpServerManager {
             } else {
                 int exitCode = mcpServerProcess.exitValue();
                 LOG.error("MCP server failed to start, exit code: " + exitCode);
+                LOG.error("Check database configuration and ensure database is accessible");
                 mcpServerProcess = null;
                 return false;
             }

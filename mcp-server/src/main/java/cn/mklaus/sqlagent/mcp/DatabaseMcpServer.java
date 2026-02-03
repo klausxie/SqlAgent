@@ -2,6 +2,7 @@ package cn.mklaus.sqlagent.mcp;
 
 import cn.mklaus.sqlagent.mcp.config.DatabaseConfig;
 import cn.mklaus.sqlagent.mcp.tools.ExplainSqlTool;
+import cn.mklaus.sqlagent.mcp.tools.GetTableMetadataTool;
 import cn.mklaus.sqlagent.mcp.tools.ListTablesTool;
 import cn.mklaus.sqlagent.mcp.tools.McpTool;
 import cn.mklaus.sqlagent.mcp.tools.ParseSqlTool;
@@ -44,6 +45,7 @@ public class DatabaseMcpServer {
     private void initializeTools() {
         try {
             // Initialize tools with database context
+            tools.put("get_table_metadata", new GetTableMetadataTool(config));
             tools.put("explain_sql", new ExplainSqlTool(config));
             tools.put("parse_sql", new ParseSqlTool());
             tools.put("list_tables", new ListTablesTool(config));
