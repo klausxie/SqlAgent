@@ -89,7 +89,7 @@ tasks {
     }
 
     // Set executable permission on bundled binaries (Unix only)
-    register("chmodBinaries") {
+    register("chmodBinaries", Exec::class) {
         group = "build"
         description = "Set executable permission on bundled OpenCode binaries"
 
@@ -97,17 +97,9 @@ tasks {
             !System.getProperty("os.name").lowercase().contains("windows")
         }
 
-        doLast {
-            val binDir = file("src/main/resources/bin")
-            if (binDir.exists()) {
-                binDir.listFiles()?.filter { it.isDirectory }?.forEach { platformDir ->
-                    platformDir.listFiles()?.filter { it.name == "opencode" }?.forEach { binary ->
-                        binary.setExecutable(true)
-                        println("Made executable: ${binary.name}")
-                    }
-                }
-            }
-        }
+        workingDir = projectDir
+        commandLine = listOf("chmod", "-R", "+x", "src/main/resources/bin")
+        isIgnoreExitValue = true
     }
 
     // Ensure binaries are executable before building
