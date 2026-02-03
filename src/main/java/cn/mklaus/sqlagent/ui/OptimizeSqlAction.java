@@ -70,30 +70,21 @@ public class OptimizeSqlAction extends AnAction {
                     panel = getToolWindowPanel(project);
                     initializePanel(panel);
 
-                    // Get settings
                     SqlAgentConfigurable.State state = SqlAgentSettingsService.getInstance().getState();
-
-                    // Log configuration info
-                    panel.log("Configuration:");
-                    panel.log("  Server URL: " + (state.serverUrl != null ? state.serverUrl : OPENCODE_SERVER_URL));
-                    panel.log("  Auto-start server: " + state.autoStartServer);
-                    panel.log("");
+                    OptimizationLogger.logConfiguration(panel, state, OPENCODE_SERVER_URL);
 
                     SqlOptimizerService optimizer = new SqlOptimizerService(
                             state.serverUrl != null ? state.serverUrl : OPENCODE_SERVER_URL,
                             state);
 
                     updateProgress(indicator, panel, "Optimizing with AI...", 0.3, 30);
-                    panel.log("Starting optimization...");
-
-                    // Simplified: Only send SQL, database config is managed by OpenCode MCP
                     response = optimizer.optimize(selectedSql.trim());
-
                     finalizeOptimization(indicator, panel, response);
 
                 } catch (Exception e) {
                     error = e;
-                    handleOptimizationError(panel, e);
+                    OptimizationLogger.logError(panel, e);
+                    if (panel != null) panel.setStatus("Optimization failed", false);
                 }
             }
 
@@ -132,19 +123,6 @@ public class OptimizeSqlAction extends AnAction {
                 }
             }
 
-            private void handleOptimizationError(OptimizationPanel panel, Exception e) {
-                if (panel != null) {
-                    panel.log("Error: " + e.getMessage());
-                    panel.setStatus("Optimization failed", false);
-
-                    // Log stack trace for debugging
-                    panel.log("Stack trace:");
-                    for (StackTraceElement element : e.getStackTrace()) {
-                        panel.log("  at " + element.toString());
-                    }
-                }
-            }
-
             @Override
             public void onSuccess() {
                 runOnEdt(() -> {
@@ -156,20 +134,7 @@ public class OptimizeSqlAction extends AnAction {
                     if (response == null || response.hasError()) {
                         String errorMsg = response != null ? response.getErrorMessage() : "Unknown error";
                         showError("Optimization failed: " + errorMsg);
-
-                        // Log raw response if available for debugging
-                        if (panel != null && response != null && response.getRawResponse() != null) {
-                            panel.log("");
-                            panel.log("=== Raw AI Response (for debugging) ===");
-                            panel.log(response.getRawResponse());
-                            panel.log("=== End of Raw Response ===");
-                            panel.log("");
-                            panel.log("Please check:");
-                            panel.log("  1. Is the sql-optimizer skill installed?");
-                            panel.log("  2. Check OpenCode logs: ~/.opencode/logs/server.log");
-                            panel.log("  3. Database configuration in ~/.opencode/opencode.json");
-                        }
-
+                        OptimizationLogger.logRawResponse(panel, response);
                         return;
                     }
 

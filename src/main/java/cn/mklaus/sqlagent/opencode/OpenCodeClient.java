@@ -208,50 +208,49 @@ public class OpenCodeClient {
      */
     private String buildDetailedErrorMessage(Exception e) {
         String errorMsg = e.getMessage();
-        StringBuilder result = new StringBuilder();
-
         if (errorMsg == null) {
             errorMsg = "Unknown error: " + e.getClass().getSimpleName();
         }
 
+        // Connection errors
         if (errorMsg.contains("Failed to create session") || errorMsg.contains("Connection refused")) {
-            result.append("Cannot connect to OpenCode server\n\n");
-            result.append("Please check:\n");
-            result.append("  1. OpenCode is running: opencode server\n");
-            result.append("  2. Server is accessible at: ").append(sessionManager.getServerUrl()).append("\n");
-            result.append("  3. Port 4096 is not blocked by firewall\n\n");
-            result.append("Quick fix: Run 'opencode server' in terminal");
-        } else if (errorMsg.contains("timeout") || errorMsg.contains("timed out")) {
-            result.append("Request timed out\n\n");
-            result.append("Possible causes:\n");
-            result.append("  • AI is processing a complex query\n");
-            result.append("  • MCP database connection is slow\n");
-            result.append("  • Network connectivity issues\n\n");
-            result.append("Please check:\n");
-            result.append("  1. database-tools MCP is configured in ~/.opencode/opencode.json\n");
-            result.append("  2. Database is accessible and responding\n");
-            result.append("  3. Try simplifying the SQL query\n\n");
-            result.append("Quick fix: Test connection in SqlAgent settings");
-        } else if (errorMsg.contains("Could not extract optimization result")) {
-            result.append("AI response parsing failed\n\n");
-            result.append("Possible causes:\n");
-            result.append("  • AI returned invalid JSON format\n");
-            result.append("  • sql-optimizer Skill not installed\n");
-            result.append("  • MCP tools not available\n\n");
-            result.append("Please check:\n");
-            result.append("  1. ~/.claude/skills/sql-optimizer/SKILL.md exists\n");
-            result.append("  2. OpenCode logs: ~/.opencode/logs/server.log\n");
-            result.append("  3. Try asking a simpler SQL query");
-        } else {
-            result.append("Optimization error\n\n");
-            result.append("Error details: ").append(errorMsg).append("\n\n");
-            result.append("Please check:\n");
-            result.append("  1. OpenCode logs: ~/.opencode/logs/server.log\n");
-            result.append("  2. Plugin logs: Help → Show Log in Explorer\n");
-            result.append("  3. Report issue: https://github.com/your-org/sqlagent/issues");
+            return formatError("Cannot connect to OpenCode server",
+                "OpenCode is running: opencode server",
+                "Server is accessible at: " + sessionManager.getServerUrl(),
+                "Port 4096 is not blocked by firewall",
+                "Quick fix: Run 'opencode server' in terminal");
         }
 
-        return result.toString();
+        // Timeout errors
+        if (errorMsg.contains("timeout") || errorMsg.contains("timed out")) {
+            return formatError("Request timed out",
+                "database-tools MCP is configured in ~/.opencode/opencode.json",
+                "Database is accessible and responding",
+                "Try simplifying the SQL query",
+                "Quick fix: Test connection in SqlAgent settings");
+        }
+
+        // Parsing errors
+        if (errorMsg.contains("Could not extract optimization result")) {
+            return formatError("AI response parsing failed",
+                "~/.claude/skills/sql-optimizer/SKILL.md exists",
+                "OpenCode logs: ~/.opencode/logs/server.log",
+                "Try asking a simpler SQL query");
+        }
+
+        // Generic errors
+        return "Optimization error\n\nError details: " + errorMsg + "\n\n" +
+               "Please check:\n  1. OpenCode logs: ~/.opencode/logs/server.log\n" +
+               "  2. Plugin logs: Help → Show Log in Explorer\n" +
+               "  3. Report issue: https://github.com/your-org/sqlagent/issues";
+    }
+
+    private String formatError(String title, String... checks) {
+        StringBuilder sb = new StringBuilder(title).append("\n\nPlease check:\n");
+        for (int i = 0; i < checks.length; i++) {
+            sb.append("  ").append(i + 1).append(". ").append(checks[i]).append("\n");
+        }
+        return sb.toString();
     }
 
     /**

@@ -98,26 +98,15 @@ public class MyBatisOptimizerAction extends AnAction {
                         panel.log("Starting optimization for: " + statementId);
                     }
 
-                    // Get settings
                     SqlAgentConfigurable.State state = SqlAgentSettingsService.getInstance().getState();
-
-                    // Log configuration info
-                    if (panel != null) {
-                        panel.log("Configuration:");
-                        panel.log("  Server URL: " + (state.serverUrl != null ? state.serverUrl : OPENCODE_SERVER_URL));
-                        panel.log("  Auto-start server: " + state.autoStartServer);
-                        panel.log("");
-                    }
+                    cn.mklaus.sqlagent.ui.OptimizationLogger.logConfiguration(panel, state, OPENCODE_SERVER_URL);
 
                     SqlOptimizerService optimizer = new SqlOptimizerService(
                             state.serverUrl != null ? state.serverUrl : OPENCODE_SERVER_URL,
                             state);
 
                     updateProgress(indicator, panel, "Optimizing with AI...", 0.5, 50);
-
-                    // Simplified: Only send SQL, database config managed by MCP
                     response = optimizer.optimize(originalSql);
-
                     updateProgress(indicator, panel, "Processing results...", 0.9, 90);
 
                     if (panel != null) {
@@ -133,16 +122,8 @@ public class MyBatisOptimizerAction extends AnAction {
 
                 } catch (Exception e) {
                     error = e;
-                    if (panel != null) {
-                        panel.log("Error: " + e.getMessage());
-                        panel.setStatus("Optimization failed", false);
-
-                        // Log stack trace for debugging
-                        panel.log("Stack trace:");
-                        for (StackTraceElement element : e.getStackTrace()) {
-                            panel.log("  at " + element.toString());
-                        }
-                    }
+                    cn.mklaus.sqlagent.ui.OptimizationLogger.logError(panel, e);
+                    if (panel != null) panel.setStatus("Optimization failed", false);
                     LOG.error("Optimization failed for: " + statementId, e);
                 }
             }
@@ -158,27 +139,12 @@ public class MyBatisOptimizerAction extends AnAction {
                     if (response == null || response.hasError()) {
                         String errorMsg = response != null ? response.getErrorMessage() : "Unknown error";
                         showError(project, "Optimization failed: " + errorMsg);
-
-                        // Log raw response if available for debugging
-                        if (panel != null && response != null && response.getRawResponse() != null) {
-                            panel.log("");
-                            panel.log("=== Raw AI Response (for debugging) ===");
-                            panel.log(response.getRawResponse());
-                            panel.log("=== End of Raw Response ===");
-                            panel.log("");
-                            panel.log("Please check:");
-                            panel.log("  1. Is the sql-optimizer skill installed?");
-                            panel.log("  2. Check OpenCode logs: ~/.opencode/logs/server.log");
-                            panel.log("  3. Database configuration in ~/.opencode/opencode.json");
-                        }
-
+                        cn.mklaus.sqlagent.ui.OptimizationLogger.logRawResponse(panel, response);
                         return;
                     }
 
-                    // Show diff view
                     DiffViewer.showDiffInEditor(project, originalSql, response.getOptimizedSql(), response);
 
-                    // Set up apply callback
                     if (panel != null) {
                         panel.setOptimizationResult(originalSql,
                                 response.getOptimizedSql(), response,

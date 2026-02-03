@@ -44,43 +44,27 @@ public class SqlOptimizerService {
     public OptimizationResponse optimize(String originalSql) {
         try {
             LOG.info("Starting optimization for SQL: " + originalSql.substring(0, Math.min(50, originalSql.length())) + "...");
-            LOG.info("OpenCode server URL: " + openCodeServerUrl);
-            LOG.info("Auto-start server: " + settings.autoStartServer);
+            LOG.info("Server: " + openCodeServerUrl + ", auto-start: " + settings.autoStartServer);
 
-            // Check if server is running
             boolean isServerRunning = serverManager.isServerRunning();
             LOG.info("Server running: " + isServerRunning);
 
-            // Auto-start OpenCode server if enabled and not running
             if (settings.autoStartServer && !isServerRunning) {
-                LOG.info("OpenCode server not running, attempting to auto-start...");
+                LOG.info("Attempting to auto-start OpenCode server...");
                 if (!serverManager.ensureServerRunning()) {
-                    LOG.error("Failed to start OpenCode server");
-                    String errorMsg = serverManager.getDetailedErrorMessage();
-                    LOG.error("Error details: " + errorMsg);
-                    return createDetailedErrorResponse("OpenCode server not available", errorMsg);
+                    return createDetailedErrorResponse("OpenCode server not available",
+                        serverManager.getDetailedErrorMessage());
                 }
                 LOG.info("OpenCode server started successfully");
             } else if (!isServerRunning) {
-                LOG.warn("OpenCode server is not running and auto-start is disabled");
-                return createDetailedErrorResponse(
-                    "Cannot connect to OpenCode server",
-                    "Please start OpenCode server:\n" +
-                    "  Run: opencode server\n" +
-                    "  Or enable auto-start in plugin settings"
-                );
+                return createDetailedErrorResponse("Cannot connect to OpenCode server",
+                    "Please start OpenCode server:\n  Run: opencode server\n  Or enable auto-start in plugin settings");
             }
 
-            // Build simplified request - just SQL, no database config
             OptimizationRequest request = buildOptimizationRequest(originalSql);
-            LOG.info("Sending optimization request...");
-
-            // Send to OpenCode - AI will use MCP tools to gather metadata and execution plan
-            OpenCodeClient client = new OpenCodeClient(openCodeServerUrl);
-            OptimizationResponse response = client.optimize(request);
+            OptimizationResponse response = new OpenCodeClient(openCodeServerUrl).optimize(request);
 
             LOG.info("Optimization completed. Has error: " + response.hasError());
-
             if (response.hasError()) {
                 LOG.error("Optimization error: " + response.getErrorMessage());
             }
@@ -89,26 +73,17 @@ public class SqlOptimizerService {
 
         } catch (Exception e) {
             LOG.error("Service error", e);
-            return createDetailedErrorResponse(
-                "Service error: " + e.getMessage(),
-                "Please check:\n" +
-                "  1. OpenCode server is running\n" +
-                "  2. Server URL is correct: " + openCodeServerUrl + "\n" +
-                "  3. Plugin logs: Help → Show Log in Explorer"
-            );
+            return createDetailedErrorResponse("Service error: " + e.getMessage(),
+                "Please check:\n  1. OpenCode server is running\n  2. Server URL: " + openCodeServerUrl);
         }
     }
 
     /**
      * Create detailed error response with suggestions
      */
-    private OptimizationResponse createDetailedErrorResponse(String title, String suggestions) {
+    private OptimizationResponse createDetailedErrorResponse(String title, String details) {
         OptimizationResponse response = new OptimizationResponse();
-        StringBuilder errorMsg = new StringBuilder();
-        errorMsg.append(title).append("\n\n");
-        errorMsg.append("Details:\n");
-        errorMsg.append(suggestions);
-        response.setErrorMessage(errorMsg.toString());
+        response.setErrorMessage(title + "\n\nDetails:\n" + details);
         return response;
     }
 

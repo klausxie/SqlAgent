@@ -1,8 +1,8 @@
 package cn.mklaus.sqlagent.service;
 
-import cn.mklaus.sqlagent.model.*;
+import cn.mklaus.sqlagent.model.OptimizationRequest;
 
-import java.util.stream.Collectors;
+import java.util.List;
 
 /**
  * Builds optimization prompts for OpenCode AI
@@ -57,34 +57,23 @@ public class PromptBuilder {
             """;
 
     public String buildPrompt(OptimizationRequest request) {
-        StringBuilder prompt = new StringBuilder();
+        return SYSTEM_PROMPT + "\n\n" +
+               "# SQL Optimization Request\n\n" +
+               "## Original Query\n```sql\n" + request.getOriginalSql() + "\n```\n\n" +
+               "<!-- Database connection is configured in MCP server -->\n" +
+               "<!-- Use database-tools MCP to get table metadata and execution plan -->\n\n" +
+               buildGoalsSection(request.getOptimizationGoals()) +
+               "Please use the sql-optimizer skill and database-tools MCP to analyze this query " +
+               "and provide the optimized SQL query in JSON format as specified above.";
+    }
 
-        prompt.append(SYSTEM_PROMPT).append("\n\n");
+    private String buildGoalsSection(List<String> goals) {
+        if (goals == null || goals.isEmpty()) return "";
 
-        prompt.append("# SQL Optimization Request\n\n");
-
-        // Original Query
-        prompt.append("## Original Query\n");
-        prompt.append("```sql\n");
-        prompt.append(request.getOriginalSql());
-        prompt.append("\n```\n\n");
-
-        // Note: Database connection info is configured in MCP server environment
-        prompt.append("<!-- Database connection is configured in MCP server -->\n");
-        prompt.append("<!-- Use database-tools MCP to get table metadata and execution plan -->\n\n");
-
-        // Optimization Goals
-        if (request.getOptimizationGoals() != null && !request.getOptimizationGoals().isEmpty()) {
-            prompt.append("## Optimization Goals\n");
-            for (String goal : request.getOptimizationGoals()) {
-                prompt.append("- ").append(goal).append("\n");
-            }
-            prompt.append("\n");
+        StringBuilder sb = new StringBuilder("## Optimization Goals\n");
+        for (String goal : goals) {
+            sb.append("- ").append(goal).append("\n");
         }
-
-        prompt.append("Please use the sql-optimizer skill and database-tools MCP to analyze this query ");
-        prompt.append("and provide the optimized SQL query in JSON format as specified above.");
-
-        return prompt.toString();
+        return sb.append("\n").toString();
     }
 }
