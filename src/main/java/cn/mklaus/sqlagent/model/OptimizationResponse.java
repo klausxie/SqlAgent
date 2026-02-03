@@ -11,6 +11,7 @@ public class OptimizationResponse {
     private List<OptimizationSuggestion> suggestions;
     private double estimatedImprovement;
     private String errorMessage;
+    private String rawResponse;  // Store raw response for debugging
 
     public OptimizationResponse() {
         this.estimatedImprovement = 0.0;
@@ -58,5 +59,13 @@ public class OptimizationResponse {
 
     public boolean hasError() {
         return errorMessage != null && !errorMessage.isEmpty();
+    }
+
+    public String getRawResponse() {
+        return rawResponse;
+    }
+
+    public void setRawResponse(String rawResponse) {
+        this.rawResponse = rawResponse;
     }
 }

@@ -44,18 +44,36 @@ public class SqlOptimizerService {
     public OptimizationResponse optimize(String originalSql) {
         try {
             LOG.info("Starting optimization for SQL: " + originalSql.substring(0, Math.min(50, originalSql.length())) + "...");
+            LOG.info("OpenCode server URL: " + openCodeServerUrl);
+            LOG.info("Auto-start server: " + settings.autoStartServer);
+
+            // Check if server is running
+            boolean isServerRunning = serverManager.isServerRunning();
+            LOG.info("Server running: " + isServerRunning);
 
             // Auto-start OpenCode server if enabled and not running
-            if (settings.autoStartServer && !serverManager.isServerRunning()) {
+            if (settings.autoStartServer && !isServerRunning) {
                 LOG.info("OpenCode server not running, attempting to auto-start...");
                 if (!serverManager.ensureServerRunning()) {
                     LOG.error("Failed to start OpenCode server");
-                    return createErrorResponse(serverManager.getDetailedErrorMessage());
+                    String errorMsg = serverManager.getDetailedErrorMessage();
+                    LOG.error("Error details: " + errorMsg);
+                    return createDetailedErrorResponse("OpenCode server not available", errorMsg);
                 }
+                LOG.info("OpenCode server started successfully");
+            } else if (!isServerRunning) {
+                LOG.warn("OpenCode server is not running and auto-start is disabled");
+                return createDetailedErrorResponse(
+                    "Cannot connect to OpenCode server",
+                    "Please start OpenCode server:\n" +
+                    "  Run: opencode server\n" +
+                    "  Or enable auto-start in plugin settings"
+                );
             }
 
             // Build simplified request - just SQL, no database config
             OptimizationRequest request = buildOptimizationRequest(originalSql);
+            LOG.info("Sending optimization request...");
 
             // Send to OpenCode - AI will use MCP tools to gather metadata and execution plan
             OpenCodeClient client = new OpenCodeClient(openCodeServerUrl);
@@ -63,12 +81,35 @@ public class SqlOptimizerService {
 
             LOG.info("Optimization completed. Has error: " + response.hasError());
 
+            if (response.hasError()) {
+                LOG.error("Optimization error: " + response.getErrorMessage());
+            }
+
             return response;
 
         } catch (Exception e) {
             LOG.error("Service error", e);
-            return createErrorResponse("Service error: " + e.getMessage());
+            return createDetailedErrorResponse(
+                "Service error: " + e.getMessage(),
+                "Please check:\n" +
+                "  1. OpenCode server is running\n" +
+                "  2. Server URL is correct: " + openCodeServerUrl + "\n" +
+                "  3. Plugin logs: Help → Show Log in Explorer"
+            );
         }
+    }
+
+    /**
+     * Create detailed error response with suggestions
+     */
+    private OptimizationResponse createDetailedErrorResponse(String title, String suggestions) {
+        OptimizationResponse response = new OptimizationResponse();
+        StringBuilder errorMsg = new StringBuilder();
+        errorMsg.append(title).append("\n\n");
+        errorMsg.append("Details:\n");
+        errorMsg.append(suggestions);
+        response.setErrorMessage(errorMsg.toString());
+        return response;
     }
 
     /**

@@ -119,7 +119,7 @@ public class OpenCodeClient {
 
             // Extract parts array
             if (!jsonResponse.has("parts")) {
-                return createErrorResponse("Response does not contain 'parts'");
+                return createErrorResponse("Response does not contain 'parts'", jsonStr);
             }
 
             JsonArray parts = jsonResponse.getAsJsonArray("parts");
@@ -138,12 +138,12 @@ public class OpenCodeClient {
                 }
             }
 
-            // If no JSON found, return error
-            return createErrorResponse("Could not extract optimization result from response");
+            // If no JSON found, return error with raw response
+            return createErrorResponse("Could not extract optimization result from response", jsonStr);
 
         } catch (Exception e) {
             LOG.error("Failed to parse optimization response", e);
-            return createErrorResponse("Failed to parse response: " + e.getMessage());
+            return createErrorResponse("Failed to parse response: " + e.getMessage(), jsonStr);
         }
     }
 
@@ -188,8 +188,18 @@ public class OpenCodeClient {
      * Create error response
      */
     private OptimizationResponse createErrorResponse(String errorMessage) {
+        return createErrorResponse(errorMessage, null);
+    }
+
+    /**
+     * Create error response with raw response for debugging
+     */
+    private OptimizationResponse createErrorResponse(String errorMessage, String rawResponse) {
         OptimizationResponse response = new OptimizationResponse();
         response.setErrorMessage(errorMessage);
+        if (rawResponse != null) {
+            response.setRawResponse(rawResponse);
+        }
         return response;
     }
 

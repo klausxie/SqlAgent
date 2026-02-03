@@ -73,6 +73,12 @@ public class OptimizeSqlAction extends AnAction {
                     // Get settings
                     SqlAgentConfigurable.State state = SqlAgentSettingsService.getInstance().getState();
 
+                    // Log configuration info
+                    panel.log("Configuration:");
+                    panel.log("  Server URL: " + (state.serverUrl != null ? state.serverUrl : OPENCODE_SERVER_URL));
+                    panel.log("  Auto-start server: " + state.autoStartServer);
+                    panel.log("");
+
                     SqlOptimizerService optimizer = new SqlOptimizerService(
                             state.serverUrl != null ? state.serverUrl : OPENCODE_SERVER_URL,
                             state);
@@ -130,6 +136,12 @@ public class OptimizeSqlAction extends AnAction {
                 if (panel != null) {
                     panel.log("Error: " + e.getMessage());
                     panel.setStatus("Optimization failed", false);
+
+                    // Log stack trace for debugging
+                    panel.log("Stack trace:");
+                    for (StackTraceElement element : e.getStackTrace()) {
+                        panel.log("  at " + element.toString());
+                    }
                 }
             }
 
@@ -144,6 +156,20 @@ public class OptimizeSqlAction extends AnAction {
                     if (response == null || response.hasError()) {
                         String errorMsg = response != null ? response.getErrorMessage() : "Unknown error";
                         showError("Optimization failed: " + errorMsg);
+
+                        // Log raw response if available for debugging
+                        if (panel != null && response != null && response.getRawResponse() != null) {
+                            panel.log("");
+                            panel.log("=== Raw AI Response (for debugging) ===");
+                            panel.log(response.getRawResponse());
+                            panel.log("=== End of Raw Response ===");
+                            panel.log("");
+                            panel.log("Please check:");
+                            panel.log("  1. Is the sql-optimizer skill installed?");
+                            panel.log("  2. Check OpenCode logs: ~/.opencode/logs/server.log");
+                            panel.log("  3. Database configuration in ~/.opencode/opencode.json");
+                        }
+
                         return;
                     }
 
